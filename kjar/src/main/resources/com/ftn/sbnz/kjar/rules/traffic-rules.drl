@@ -1,0 +1,79 @@
+package com.ftn.sbnz.kjar.rules
+
+import com.ftn.sbnz.model.AlcoTest
+import com.ftn.sbnz.model.DrugTest
+import com.ftn.sbnz.model.Control
+import com.ftn.sbnz.model.ControlDecision
+import com.ftn.sbnz.model.Offense
+import com.ftn.sbnz.model.Driver
+import com.ftn.sbnz.model.DrivingLicense
+
+rule "Istekla vozacka dozvola"
+    salience 100
+when
+    $vozac : Driver()
+    $dozvola : DrivingLicense(expiryDate != null, expiryDate.isBefore(java.time.LocalDate.now()))
+    $odluka : ControlDecision(riskLevel < 2)
+then
+    insert(new Offense($vozac.getPersonalId(), "ISTEKLA_VOZACKA", "Visok", "Vozacka dozvola je istekla"));
+    modify($odluka) {
+        setRiskLevel(2),
+        setRecommendation("ISKLJUCENJE_IZ_SAOBRACAJA")
+    }
+end
+
+rule "Pocetnik sa alkoholom"
+    salience 90
+when
+    $vozac : Driver(status == "pocetnik")
+    $alko : AlcoTest(refused == false, result > 0.0)
+    $odluka : ControlDecision(riskLevel < 3)
+then
+    insert(new Offense($vozac.getPersonalId(), "POCETNIK_ALKOHOL", "Visok", "Vozac pocetnik ima alkohol u krvi"));
+    modify($odluka) {
+        setRiskLevel(3),
+        setRecommendation("ZADRZAVANJE_VOZACA")
+    }
+end
+
+rule "Profesionalni vozac sa alkoholom"
+    salience 85
+when
+    $vozac : Driver(status == "profesionalni")
+    $alko : AlcoTest(refused == false, result > 0.0)
+    $odluka : ControlDecision(riskLevel < 3)
+then
+    insert(new Offense($vozac.getPersonalId(), "PROFESIONALNI_VOZAC_ALKOHOL", "Visok", "Profesionalni vozac ima alkohol u krvi"));
+    modify($odluka) {
+        setRiskLevel(3),
+        setRecommendation("ISKLJUCENJE_IZ_SAOBRACAJA")
+    }
+end
+
+rule "Odbijanje testiranja"
+    salience 80
+when
+    $vozac : Driver()
+    (AlcoTest(refused == true) or DrugTest(refused == true))
+    $odluka : ControlDecision(riskLevel < 4)
+then
+    insert(new Offense($vozac.getPersonalId(), "ODBIJANJE_TESTIRANJA", "Kritican", "Vozac je odbio testiranje"));
+    modify($odluka) {
+        setRiskLevel(4),
+        setRecommendation("HITAN_LEKARSKI_PREGLED")
+    }
+end
+
+rule "Visokorizican vozac po kontekstu"
+    salience 70
+when
+    $vozac : Driver(previousOffenses >= 3 || previousAlcoholOffenses >= 2)
+    $kontrola : Control(nightControl == true || aggressiveDriving == true || afterAccident == true)
+    $odluka : ControlDecision(riskLevel < 4)
+then
+    insert(new Offense($vozac.getPersonalId(), "VISOK_RIZIK", "Kritican", "Kontekst kontrole ukazuje na visok rizik"));
+    modify($odluka) {
+        setRiskLevel(4),
+        setRecommendation("ZADRZAVANJE_VOZACA")
+    }
+end
