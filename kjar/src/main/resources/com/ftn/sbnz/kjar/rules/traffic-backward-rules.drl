@@ -1,0 +1,145 @@
+package com.ftn.sbnz.kjar.rules
+
+import com.ftn.sbnz.model.AlcoholState
+import com.ftn.sbnz.model.CriticalRiskDriver
+import com.ftn.sbnz.model.HighPriorityControl
+import com.ftn.sbnz.model.HighRiskDriver
+import com.ftn.sbnz.model.Offense
+import com.ftn.sbnz.model.PossibleDrugInfluence
+import com.ftn.sbnz.model.RepeatHighRiskDriver
+
+declare DriverRiskFactor
+    personalId : String
+    factor : String
+end
+
+declare RiskFactorLink
+    higherFactor : String
+    lowerFactor : String
+end
+
+rule "BC hijerarhija faktora rizika"
+    salience 200
+when
+    not RiskFactorLink(higherFactor == "ISKLJUCENJE_IZ_SAOBRACAJA", lowerFactor == "ISTEKLA_VOZACKA")
+then
+    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "ISTEKLA_VOZACKA"));
+    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "ZABRANA_UPRAVLJANJA"));
+    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "PROFESIONALNI_VOZAC_ALKOHOL"));
+    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "TESKA_ALKOHOLISANOST"));
+    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "POTPUNA_ALKOHOLISANOST"));
+    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "DANGEROUS_DRIVING"));
+    insert(new RiskFactorLink("HITAN_LEKARSKI_PREGLED", "ODBIJANJE_ALKOTESTA"));
+    insert(new RiskFactorLink("HITAN_LEKARSKI_PREGLED", "ODBIJANJE_DROGA_TESTA"));
+    insert(new RiskFactorLink("HITAN_LEKARSKI_PREGLED", "SUMNJA_NA_DROGE"));
+    insert(new RiskFactorLink("VISOKORIZICAN_VOZAC", "VISOK_RIZIK"));
+    insert(new RiskFactorLink("VISOKORIZICAN_VOZAC", "PONOVLJENI_VISOK_RIZIK"));
+    insert(new RiskFactorLink("VISOKORIZICAN_VOZAC", "DANGEROUS_DRIVING"));
+    insert(new RiskFactorLink("POTREBNO_ZADRZAVANJE", "POCETNIK_ALKOHOL"));
+    insert(new RiskFactorLink("POTREBNO_ZADRZAVANJE", "KRITICAN_RIZIK"));
+    insert(new RiskFactorLink("POTREBNO_ZADRZAVANJE", "PONOVLJENI_VISOK_RIZIK"));
+    insert(new RiskFactorLink("DANGEROUS_DRIVING", "VISOK_RIZIK"));
+    insert(new RiskFactorLink("DANGEROUS_DRIVING", "SKOLSKA_ZONA_BRZINA"));
+end
+
+rule "BC faktor iz prekrsaja"
+    salience 55
+when
+    $prekrsaj : Offense($pid : driverPersonalId, $tip : type)
+    not DriverRiskFactor(personalId == $pid, factor == $tip)
+then
+    insert(new DriverRiskFactor($pid, $tip));
+end
+
+rule "BC faktor teska alkoholisanost"
+    salience 54
+when
+    $stanje : AlcoholState($pid : personalId, state == "TESKA_ALKOHOLISANOST")
+    not DriverRiskFactor(personalId == $pid, factor == "TESKA_ALKOHOLISANOST")
+then
+    insert(new DriverRiskFactor($pid, "TESKA_ALKOHOLISANOST"));
+end
+
+rule "BC faktor potpuna alkoholisanost"
+    salience 54
+when
+    $stanje : AlcoholState($pid : personalId, state == "POTPUNA_ALKOHOLISANOST")
+    not DriverRiskFactor(personalId == $pid, factor == "POTPUNA_ALKOHOLISANOST")
+then
+    insert(new DriverRiskFactor($pid, "POTPUNA_ALKOHOLISANOST"));
+end
+
+rule "BC faktor sumnja na droge"
+    salience 53
+when
+    $sumnja : PossibleDrugInfluence($pid : personalId)
+    not DriverRiskFactor(personalId == $pid, factor == "SUMNJA_NA_DROGE")
+then
+    insert(new DriverRiskFactor($pid, "SUMNJA_NA_DROGE"));
+end
+
+rule "BC faktor visokorizican vozac"
+    salience 52
+when
+    $rizik : HighRiskDriver($pid : personalId)
+    not DriverRiskFactor(personalId == $pid, factor == "VISOK_RIZIK")
+then
+    insert(new DriverRiskFactor($pid, "VISOK_RIZIK"));
+end
+
+rule "BC faktor kritican rizik"
+    salience 51
+when
+    $rizik : CriticalRiskDriver($pid : personalId)
+    not DriverRiskFactor(personalId == $pid, factor == "KRITICAN_RIZIK")
+then
+    insert(new DriverRiskFactor($pid, "KRITICAN_RIZIK"));
+end
+
+rule "BC faktor prioritetna kontrola"
+    salience 50
+when
+    $prioritet : HighPriorityControl($pid : personalId)
+    not DriverRiskFactor(personalId == $pid, factor == "SKOLSKA_ZONA_BRZINA")
+then
+    insert(new DriverRiskFactor($pid, "SKOLSKA_ZONA_BRZINA"));
+end
+
+rule "BC faktor ponovljeni visok rizik"
+    salience 49
+when
+    $ponavljanje : RepeatHighRiskDriver($pid : personalId)
+    not DriverRiskFactor(personalId == $pid, factor == "PONOVLJENI_VISOK_RIZIK")
+then
+    insert(new DriverRiskFactor($pid, "PONOVLJENI_VISOK_RIZIK"));
+end
+
+query direktni_faktori_rizika(String $pid, String $factor)
+    DriverRiskFactor(personalId == $pid, factor == $factor)
+end
+
+query povezani_faktori_rizika(String $pid, String $factor)
+    DriverRiskFactor(personalId == $pid, factor == $factor)
+    or
+    (
+        RiskFactorLink(higherFactor == $factor, $lowerFactor : lowerFactor)
+        and
+        povezani_faktori_rizika($pid, $lowerFactor;)
+    )
+end
+
+query treba_iskljuciti_vozaca(String $pid)
+    povezani_faktori_rizika($pid, "ISKLJUCENJE_IZ_SAOBRACAJA";)
+end
+
+query potreban_hitan_pregled(String $pid)
+    povezani_faktori_rizika($pid, "HITAN_LEKARSKI_PREGLED";)
+end
+
+query visokorizican_vozac(String $pid)
+    povezani_faktori_rizika($pid, "VISOKORIZICAN_VOZAC";)
+end
+
+query potrebno_zadrzavanje(String $pid)
+    povezani_faktori_rizika($pid, "POTREBNO_ZADRZAVANJE";)
+end

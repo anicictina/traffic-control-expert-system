@@ -1,12 +1,20 @@
 package com.ftn.sbnz.kjar.rules
 
 import com.ftn.sbnz.model.AlcoTest
+import com.ftn.sbnz.model.AlcoholState
+import com.ftn.sbnz.model.CriticalRiskDriver
+import com.ftn.sbnz.model.HighPriorityControl
 import com.ftn.sbnz.model.DrugTest
 import com.ftn.sbnz.model.Control
 import com.ftn.sbnz.model.ControlDecision
 import com.ftn.sbnz.model.Offense
 import com.ftn.sbnz.model.Driver
 import com.ftn.sbnz.model.DrivingLicense
+import com.ftn.sbnz.model.PossibleDrugInfluence
+import com.ftn.sbnz.model.RefusedAlcoholTestEvent
+import com.ftn.sbnz.model.RefusedDrugTestEvent
+import com.ftn.sbnz.model.RepeatHighRiskDriver
+import com.ftn.sbnz.model.SpeedingEvent
 
 rule "Istekla vozacka dozvola"
     salience 100
@@ -18,6 +26,19 @@ then
     insert(new Offense($vozac.getPersonalId(), "ISTEKLA_VOZACKA", "Visok", "Vozacka dozvola je istekla"));
     modify($odluka) {
         setRiskLevel(2),
+        setRecommendation("ISKLJUCENJE_IZ_SAOBRACAJA")
+    }
+end
+
+rule "Zabrana upravljanja"
+    salience 95
+when
+    $vozac : Driver(drivingBan == true)
+    $odluka : ControlDecision(riskLevel < 4)
+then
+    insert(new Offense($vozac.getPersonalId(), "ZABRANA_UPRAVLJANJA", "Kritican", "Vozac upravlja tokom zabrane upravljanja"));
+    modify($odluka) {
+        setRiskLevel(4),
         setRecommendation("ISKLJUCENJE_IZ_SAOBRACAJA")
     }
 end
@@ -50,28 +71,194 @@ then
     }
 end
 
-rule "Odbijanje testiranja"
+rule "Bez alkoholisanosti"
+    salience 82
+when
+    $vozac : Driver()
+    $alko : AlcoTest(refused == false, result >= 0.0, result <= 0.20)
+    not AlcoholState(personalId == $vozac.personalId, state == "BEZ_ALKOHOLA")
+then
+    insert(new AlcoholState($vozac.getPersonalId(), "BEZ_ALKOHOLA"));
+end
+
+rule "Pripito stanje"
+    salience 81
+when
+    $vozac : Driver()
+    $alko : AlcoTest(refused == false, result >= 0.21, result <= 0.50)
+    not AlcoholState(personalId == $vozac.personalId, state == "PRIPITO")
+then
+    insert(new AlcoholState($vozac.getPersonalId(), "PRIPITO"));
+end
+
+rule "Srednja alkoholisanost"
     salience 80
 when
     $vozac : Driver()
-    (AlcoTest(refused == true) or DrugTest(refused == true))
+    $alko : AlcoTest(refused == false, result >= 0.51, result <= 1.20)
+    not AlcoholState(personalId == $vozac.personalId, state == "SREDNJA_ALKOHOLISANOST")
+then
+    insert(new AlcoholState($vozac.getPersonalId(), "SREDNJA_ALKOHOLISANOST"));
+end
+
+rule "Teska alkoholisanost"
+    salience 79
+when
+    $vozac : Driver()
+    $alko : AlcoTest(refused == false, result >= 1.21, result <= 2.00)
+    not AlcoholState(personalId == $vozac.personalId, state == "TESKA_ALKOHOLISANOST")
+then
+    insert(new AlcoholState($vozac.getPersonalId(), "TESKA_ALKOHOLISANOST"));
+end
+
+rule "Potpuna alkoholisanost"
+    salience 78
+when
+    $vozac : Driver()
+    $alko : AlcoTest(refused == false, result > 2.00)
+    not AlcoholState(personalId == $vozac.personalId, state == "POTPUNA_ALKOHOLISANOST")
+then
+    insert(new AlcoholState($vozac.getPersonalId(), "POTPUNA_ALKOHOLISANOST"));
+end
+
+rule "Tezka ili potpuna alkoholisanost"
+    salience 77
+when
+    $vozac : Driver()
+    AlcoholState(personalId == $vozac.personalId, state in ("TESKA_ALKOHOLISANOST", "POTPUNA_ALKOHOLISANOST"))
     $odluka : ControlDecision(riskLevel < 4)
 then
-    insert(new Offense($vozac.getPersonalId(), "ODBIJANJE_TESTIRANJA", "Kritican", "Vozac je odbio testiranje"));
+    insert(new Offense($vozac.getPersonalId(), "TESKA_ALKOHOLISANOST", "Kritican", "Vozac je u teskoj ili potpunoj alkoholisanosti"));
+    modify($odluka) {
+        setRiskLevel(4),
+        setRecommendation("ISKLJUCENJE_IZ_SAOBRACAJA")
+    }
+end
+
+rule "Odbijanje alkotesta"
+    salience 80
+when
+    $vozac : Driver()
+    $alko : AlcoTest(refused == true)
+    $odluka : ControlDecision()
+then
+    insert(new Offense($vozac.getPersonalId(), "ODBIJANJE_ALKOTESTA", "Kritican", "Vozac je odbio alkotest"));
+    insert(new RefusedAlcoholTestEvent($vozac.getPersonalId(), java.time.LocalDateTime.now()));
     modify($odluka) {
         setRiskLevel(4),
         setRecommendation("HITAN_LEKARSKI_PREGLED")
     }
 end
 
-rule "Visokorizican vozac po kontekstu"
+rule "Odbijanje droga testa"
+    salience 79
+when
+    $vozac : Driver()
+    $droga : DrugTest(refused == true)
+    $odluka : ControlDecision()
+then
+    insert(new Offense($vozac.getPersonalId(), "ODBIJANJE_DROGA_TESTA", "Kritican", "Vozac je odbio droga test"));
+    insert(new RefusedDrugTestEvent($vozac.getPersonalId(), java.time.LocalDateTime.now()));
+    modify($odluka) {
+        setRiskLevel(4),
+        setRecommendation("HITAN_LEKARSKI_PREGLED")
+    }
+end
+
+rule "Visokorizican vozac po ponasanju"
     salience 70
 when
-    $vozac : Driver(previousOffenses >= 3 || previousAlcoholOffenses >= 2)
-    $kontrola : Control(nightControl == true || aggressiveDriving == true || afterAccident == true)
+    $vozac : Driver(previousOffenses >= 3)
+    $kontrola : Control(aggressiveDriving == true)
+    $brzina : SpeedingEvent(personalId == $vozac.personalId, speedOverLimit > 0)
+    not HighRiskDriver(personalId == $vozac.personalId)
+then
+    insert(new HighRiskDriver($vozac.getPersonalId(), 4));
+    insert(new Offense($vozac.getPersonalId(), "VISOK_RIZIK", "Kritican", "Agresivna voznja, prekoračenje brzine i prethodni ozbiljni prekršaji"));
+end
+
+rule "Nocna agresivna voznja povecava rizik"
+    salience 69
+when
+    $kontrola : Control(nightControl == true, aggressiveDriving == true)
     $odluka : ControlDecision(riskLevel < 4)
 then
-    insert(new Offense($vozac.getPersonalId(), "VISOK_RIZIK", "Kritican", "Kontekst kontrole ukazuje na visok rizik"));
+    modify($odluka) {
+        setRiskLevel(Math.min(4, $odluka.getRiskLevel() + 1)),
+        setRecommendation("POJACANA_KONTROLA")
+    }
+end
+
+rule "Skolska zona i brzina"
+    salience 68
+when
+    $vozac : Driver()
+    $kontrola : Control(schoolZone == true)
+    $brzina : SpeedingEvent(personalId == $vozac.personalId, speedOverLimit > 0)
+    not HighPriorityControl(personalId == $vozac.personalId)
+then
+    insert(new HighPriorityControl($vozac.getPersonalId(), "Skolska zona i prekoračenje brzine"));
+end
+
+rule "Skolska zona i brzina povecavaju rizik"
+    salience 67
+when
+    $odluka : ControlDecision(riskLevel < 4)
+    HighPriorityControl()
+then
+    modify($odluka) {
+        setRiskLevel(Math.min(4, $odluka.getRiskLevel() + 1)),
+        setRecommendation("POJACANA_KONTROLA")
+    }
+end
+
+rule "Sumnja na psihoaktivne supstance"
+    salience 66
+when
+    $vozac : Driver()
+    $kontrola : Control(redEyes == true, disorientation == true, delayedReaction == true)
+    not PossibleDrugInfluence(personalId == $vozac.personalId)
+then
+    insert(new PossibleDrugInfluence($vozac.getPersonalId(), "Crvene oči, dezorijentacija i kašnjenje reakcije"));
+end
+
+rule "Sumnja na droge i odbijanje testiranja"
+    salience 65
+when
+    $vozac : Driver()
+    PossibleDrugInfluence(personalId == $vozac.personalId)
+    RefusedDrugTestEvent(personalId == $vozac.personalId)
+    not CriticalRiskDriver(personalId == $vozac.personalId)
+then
+    insert(new CriticalRiskDriver($vozac.getPersonalId(), "Sumnja na psihoaktivne supstance i odbijanje droga testa"));
+end
+
+rule "Kritican rizik zahtijeva zadrzavanje vozaca"
+    salience 64
+when
+    $vozac : Driver()
+    CriticalRiskDriver(personalId == $vozac.personalId)
+    $odluka : ControlDecision(riskLevel < 4)
+then
+    insert(new Offense($vozac.getPersonalId(), "KRITICAN_RIZIK", "Kritican", "Postoji kritican rizik po bezbednost u saobracaju"));
+    modify($odluka) {
+        setRiskLevel(4),
+        setRecommendation("ZADRZAVANJE_VOZACA")
+    }
+end
+
+rule "Ponovljeni visok rizik vozaca"
+    salience 63
+when
+    $vozac : Driver(previousOffenses > 3)
+    Number( intValue >= 2 ) from accumulate(
+        Offense(driverPersonalId == $vozac.personalId, type != "ISTEKLA_VOZACKA"),
+        count(1)
+    )
+    not RepeatHighRiskDriver(personalId == $vozac.personalId)
+    $odluka : ControlDecision()
+then
+    insert(new RepeatHighRiskDriver($vozac.getPersonalId(), $vozac.getPreviousOffenses()));
     modify($odluka) {
         setRiskLevel(4),
         setRecommendation("ZADRZAVANJE_VOZACA")

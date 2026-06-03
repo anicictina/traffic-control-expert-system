@@ -1,6 +1,6 @@
 <kmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xmlns="http://jboss.org/kie/6.0.0/kmodule">
-	<kbase name="kontrolaKBase" packages="com.ftn.sbnz.kjar.rules">
+	<kbase name="kontrolaKBase" packages="com.ftn.sbnz.kjar.rules" eventProcessingMode="stream">
 		<ksession name="rulesKSession"/>
 	</kbase>
 </kmodule>

@@ -13,10 +13,17 @@ public class Control {
     private boolean highRiskZone;
     private boolean afterAccident;
     private boolean aggressiveDriving;
+    private boolean redEyes;
+    private boolean disorientation;
+    private boolean delayedReaction;
 
     public Control() {}
 
     public Control(LocalDateTime time, String location, String type, boolean nightControl, boolean weekendControl, boolean schoolZone, boolean highRiskZone, boolean afterAccident, boolean aggressiveDriving) {
+        this(time, location, type, nightControl, weekendControl, schoolZone, highRiskZone, afterAccident, aggressiveDriving, false, false, false);
+    }
+
+    public Control(LocalDateTime time, String location, String type, boolean nightControl, boolean weekendControl, boolean schoolZone, boolean highRiskZone, boolean afterAccident, boolean aggressiveDriving, boolean redEyes, boolean disorientation, boolean delayedReaction) {
         this.time = time;
         this.location = location;
         this.type = type;
@@ -26,6 +33,9 @@ public class Control {
         this.highRiskZone = highRiskZone;
         this.afterAccident = afterAccident;
         this.aggressiveDriving = aggressiveDriving;
+        this.redEyes = redEyes;
+        this.disorientation = disorientation;
+        this.delayedReaction = delayedReaction;
     }
 
     public LocalDateTime getTime() { return time; }
@@ -46,6 +56,12 @@ public class Control {
     public void setAfterAccident(boolean afterAccident) { this.afterAccident = afterAccident; }
     public boolean isAggressiveDriving() { return aggressiveDriving; }
     public void setAggressiveDriving(boolean aggressiveDriving) { this.aggressiveDriving = aggressiveDriving; }
+    public boolean isRedEyes() { return redEyes; }
+    public void setRedEyes(boolean redEyes) { this.redEyes = redEyes; }
+    public boolean isDisorientation() { return disorientation; }
+    public void setDisorientation(boolean disorientation) { this.disorientation = disorientation; }
+    public boolean isDelayedReaction() { return delayedReaction; }
+    public void setDelayedReaction(boolean delayedReaction) { this.delayedReaction = delayedReaction; }
 
     @Override
     public String toString() {
@@ -59,6 +75,9 @@ public class Control {
             ", highRiskZone=" + highRiskZone +
             ", afterAccident=" + afterAccident +
             ", aggressiveDriving=" + aggressiveDriving +
+            ", redEyes=" + redEyes +
+            ", disorientation=" + disorientation +
+            ", delayedReaction=" + delayedReaction +
             '}';
     }
 }
