@@ -26,9 +26,10 @@ then
     insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "ISTEKLA_VOZACKA"));
     insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "ZABRANA_UPRAVLJANJA"));
     insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "PROFESIONALNI_VOZAC_ALKOHOL"));
-    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "TESKA_ALKOHOLISANOST"));
-    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "POTPUNA_ALKOHOLISANOST"));
+    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "TESKA_ALKOHOLISANOST_PREKRSAJ"));
+    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "POTPUNA_ALKOHOLISANOST_PREKRSAJ"));
     insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "DANGEROUS_DRIVING"));
+    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "PREKORACENJE_ALKOHOLA"));
     insert(new RiskFactorLink("HITAN_LEKARSKI_PREGLED", "ODBIJANJE_ALKOTESTA"));
     insert(new RiskFactorLink("HITAN_LEKARSKI_PREGLED", "ODBIJANJE_DROGA_TESTA"));
     insert(new RiskFactorLink("HITAN_LEKARSKI_PREGLED", "SUMNJA_NA_DROGE"));
@@ -55,18 +56,18 @@ rule "BC faktor teska alkoholisanost"
     salience 54
 when
     $stanje : AlcoholState($pid : personalId, state == "TESKA_ALKOHOLISANOST")
-    not DriverRiskFactor(personalId == $pid, factor == "TESKA_ALKOHOLISANOST")
+    not DriverRiskFactor(personalId == $pid, factor == "TESKA_ALKOHOLISANOST_PREKRSAJ")
 then
-    insert(new DriverRiskFactor($pid, "TESKA_ALKOHOLISANOST"));
+    insert(new DriverRiskFactor($pid, "TESKA_ALKOHOLISANOST_PREKRSAJ"));
 end
 
 rule "BC faktor potpuna alkoholisanost"
     salience 54
 when
     $stanje : AlcoholState($pid : personalId, state == "POTPUNA_ALKOHOLISANOST")
-    not DriverRiskFactor(personalId == $pid, factor == "POTPUNA_ALKOHOLISANOST")
+    not DriverRiskFactor(personalId == $pid, factor == "POTPUNA_ALKOHOLISANOST_PREKRSAJ")
 then
-    insert(new DriverRiskFactor($pid, "POTPUNA_ALKOHOLISANOST"));
+    insert(new DriverRiskFactor($pid, "POTPUNA_ALKOHOLISANOST_PREKRSAJ"));
 end
 
 rule "BC faktor sumnja na droge"

@@ -13,6 +13,7 @@ import com.ftn.sbnz.model.DrivingLicense
 import com.ftn.sbnz.model.PossibleDrugInfluence
 import com.ftn.sbnz.model.RefusedAlcoholTestEvent
 import com.ftn.sbnz.model.RefusedDrugTestEvent
+import com.ftn.sbnz.model.HighRiskDriver
 import com.ftn.sbnz.model.RepeatHighRiskDriver
 import com.ftn.sbnz.model.SpeedingEvent
 
@@ -121,14 +122,45 @@ then
     insert(new AlcoholState($vozac.getPersonalId(), "POTPUNA_ALKOHOLISANOST"));
 end
 
-rule "Tezka ili potpuna alkoholisanost"
+rule "Obican vozac sa prekomernim alkoholom"
+    salience 76
+when
+    $vozac : Driver(status == "obican")
+    AlcoholState(personalId == $vozac.personalId, state == "SREDNJA_ALKOHOLISANOST")
+    $odluka : ControlDecision(riskLevel < 2)
+then
+    insert(new Offense($vozac.getPersonalId(), "PREKORACENJE_ALKOHOLA", "Srednji",
+        "Vozac ima alkohol u krvi iznad zakonskog maksimuma (0.5 promila)"));
+    modify($odluka) {
+        setRiskLevel(2),
+        setRecommendation("ISKLJUCENJE_IZ_SAOBRACAJA")
+    }
+end
+
+rule "Teska alkoholisanost - iskljucenje iz saobracaja"
     salience 77
 when
     $vozac : Driver()
-    AlcoholState(personalId == $vozac.personalId, state in ("TESKA_ALKOHOLISANOST", "POTPUNA_ALKOHOLISANOST"))
+    AlcoholState(personalId == $vozac.personalId, state == "TESKA_ALKOHOLISANOST")
     $odluka : ControlDecision(riskLevel < 4)
 then
-    insert(new Offense($vozac.getPersonalId(), "TESKA_ALKOHOLISANOST", "Kritican", "Vozac je u teskoj ili potpunoj alkoholisanosti"));
+    insert(new Offense($vozac.getPersonalId(), "TESKA_ALKOHOLISANOST_PREKRSAJ", "Kritican",
+        "Vozac je u teskoj alkoholisanosti (1.21 - 2.00 promila)"));
+    modify($odluka) {
+        setRiskLevel(4),
+        setRecommendation("ISKLJUCENJE_IZ_SAOBRACAJA")
+    }
+end
+
+rule "Potpuna alkoholisanost - iskljucenje iz saobracaja"
+    salience 77
+when
+    $vozac : Driver()
+    AlcoholState(personalId == $vozac.personalId, state == "POTPUNA_ALKOHOLISANOST")
+    $odluka : ControlDecision(riskLevel < 4)
+then
+    insert(new Offense($vozac.getPersonalId(), "POTPUNA_ALKOHOLISANOST_PREKRSAJ", "Kritican",
+        "Vozac je u potpunoj alkoholisanosti (preko 2.00 promila)"));
     modify($odluka) {
         setRiskLevel(4),
         setRecommendation("ISKLJUCENJE_IZ_SAOBRACAJA")
@@ -212,14 +244,37 @@ then
     }
 end
 
-rule "Sumnja na psihoaktivne supstance"
+rule "Sumnja na psihoaktivne supstance - crvene oci"
     salience 66
 when
     $vozac : Driver()
-    $kontrola : Control(redEyes == true, disorientation == true, delayedReaction == true)
+    Control(redEyes == true, disorientation == true, delayedReaction == true)
     not PossibleDrugInfluence(personalId == $vozac.personalId)
 then
-    insert(new PossibleDrugInfluence($vozac.getPersonalId(), "Crvene oči, dezorijentacija i kašnjenje reakcije"));
+    insert(new PossibleDrugInfluence($vozac.getPersonalId(),
+        "Crvene oci, dezorijentacija i kasnjenje reakcije"));
+end
+
+rule "Sumnja na psihoaktivne supstance - nestabilan hod"
+    salience 66
+when
+    $vozac : Driver()
+    Control(unstableGait == true, disorientation == true, delayedReaction == true)
+    not PossibleDrugInfluence(personalId == $vozac.personalId)
+then
+    insert(new PossibleDrugInfluence($vozac.getPersonalId(),
+        "Nestabilan hod, dezorijentacija i kasnjenje reakcije"));
+end
+
+rule "Sumnja na psihoaktivne supstance - otezani govor"
+    salience 66
+when
+    $vozac : Driver()
+    Control(slurredSpeech == true, disorientation == true, delayedReaction == true)
+    not PossibleDrugInfluence(personalId == $vozac.personalId)
+then
+    insert(new PossibleDrugInfluence($vozac.getPersonalId(),
+        "Otezani govor, dezorijentacija i kasnjenje reakcije"));
 end
 
 rule "Sumnja na droge i odbijanje testiranja"
