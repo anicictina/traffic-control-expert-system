@@ -16,6 +16,8 @@ public class Control {
     private boolean redEyes;
     private boolean disorientation;
     private boolean delayedReaction;
+    private boolean unstableGait;
+    private boolean slurredSpeech;
 
     public Control() {}
 
@@ -24,6 +26,10 @@ public class Control {
     }
 
     public Control(LocalDateTime time, String location, String type, boolean nightControl, boolean weekendControl, boolean schoolZone, boolean highRiskZone, boolean afterAccident, boolean aggressiveDriving, boolean redEyes, boolean disorientation, boolean delayedReaction) {
+        this(time, location, type, nightControl, weekendControl, schoolZone, highRiskZone, afterAccident, aggressiveDriving, redEyes, disorientation, delayedReaction, false, false);
+    }
+
+    public Control(LocalDateTime time, String location, String type, boolean nightControl, boolean weekendControl, boolean schoolZone, boolean highRiskZone, boolean afterAccident, boolean aggressiveDriving, boolean redEyes, boolean disorientation, boolean delayedReaction, boolean unstableGait, boolean slurredSpeech) {
         this.time = time;
         this.location = location;
         this.type = type;
@@ -36,6 +42,8 @@ public class Control {
         this.redEyes = redEyes;
         this.disorientation = disorientation;
         this.delayedReaction = delayedReaction;
+        this.unstableGait = unstableGait;
+        this.slurredSpeech = slurredSpeech;
     }
 
     public LocalDateTime getTime() { return time; }
@@ -62,6 +70,10 @@ public class Control {
     public void setDisorientation(boolean disorientation) { this.disorientation = disorientation; }
     public boolean isDelayedReaction() { return delayedReaction; }
     public void setDelayedReaction(boolean delayedReaction) { this.delayedReaction = delayedReaction; }
+    public boolean isUnstableGait() { return unstableGait; }
+    public void setUnstableGait(boolean unstableGait) { this.unstableGait = unstableGait; }
+    public boolean isSlurredSpeech() { return slurredSpeech; }
+    public void setSlurredSpeech(boolean slurredSpeech) { this.slurredSpeech = slurredSpeech; }
 
     @Override
     public String toString() {
@@ -78,6 +90,8 @@ public class Control {
             ", redEyes=" + redEyes +
             ", disorientation=" + disorientation +
             ", delayedReaction=" + delayedReaction +
+            ", unstableGait=" + unstableGait +
+            ", slurredSpeech=" + slurredSpeech +
             '}';
     }
 }

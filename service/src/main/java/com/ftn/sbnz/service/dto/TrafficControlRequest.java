@@ -28,6 +28,8 @@ public class TrafficControlRequest {
     private boolean redEyes;
     private boolean disorientation;
     private boolean delayedReaction;
+    private boolean unstableGait;
+    private boolean slurredSpeech;
 
     // Alkotest
     private double alcoholResult;
@@ -83,6 +85,10 @@ public class TrafficControlRequest {
     public void setDisorientation(boolean disorientation) { this.disorientation = disorientation; }
     public boolean isDelayedReaction() { return delayedReaction; }
     public void setDelayedReaction(boolean delayedReaction) { this.delayedReaction = delayedReaction; }
+    public boolean isUnstableGait() { return unstableGait; }
+    public void setUnstableGait(boolean unstableGait) { this.unstableGait = unstableGait; }
+    public boolean isSlurredSpeech() { return slurredSpeech; }
+    public void setSlurredSpeech(boolean slurredSpeech) { this.slurredSpeech = slurredSpeech; }
     public double getAlcoholResult() { return alcoholResult; }
     public void setAlcoholResult(double alcoholResult) { this.alcoholResult = alcoholResult; }
     public boolean isRefusedAlcoholTest() { return refusedAlcoholTest; }

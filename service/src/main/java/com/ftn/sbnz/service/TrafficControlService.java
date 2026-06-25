@@ -48,7 +48,8 @@ public class TrafficControlService {
                 controlTime, req.getLocation(), req.getControlType(),
                 req.isNightControl(), req.isWeekendControl(), req.isSchoolZone(),
                 req.isHighRiskZone(), req.isAfterAccident(), req.isAggressiveDriving(),
-                req.isRedEyes(), req.isDisorientation(), req.isDelayedReaction()
+                req.isRedEyes(), req.isDisorientation(), req.isDelayedReaction(),
+                req.isUnstableGait(), req.isSlurredSpeech()
             );
 
             AlcoTest alcoTest = new AlcoTest(req.getAlcoholResult(), req.isRefusedAlcoholTest());
