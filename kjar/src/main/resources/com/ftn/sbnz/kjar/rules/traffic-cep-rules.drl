@@ -1,0 +1,126 @@
+package com.ftn.sbnz.kjar.rules
+
+import com.ftn.sbnz.model.AccelerationEvent
+import com.ftn.sbnz.model.AggressiveDrivingPattern
+import com.ftn.sbnz.model.CepAlarm
+import com.ftn.sbnz.model.Control
+import com.ftn.sbnz.model.Driver
+import com.ftn.sbnz.model.HighPriorityControl
+import com.ftn.sbnz.model.LaneCrossingEvent
+import com.ftn.sbnz.model.PotentialEscapeAttempt
+import com.ftn.sbnz.model.RefusedAlcoholTestEvent
+import com.ftn.sbnz.model.RefusedDrugTestEvent
+import com.ftn.sbnz.model.RefusedStopEvent
+import com.ftn.sbnz.model.SpeedingEvent
+import com.ftn.sbnz.model.SuddenBrakingEvent
+
+// ===========================================================================
+// Deklaracija dogadjaja za CEP obradu
+// ===========================================================================
+
+declare SpeedingEvent
+    @role(event)
+end
+
+declare SuddenBrakingEvent
+    @role(event)
+end
+
+declare LaneCrossingEvent
+    @role(event)
+end
+
+declare RefusedStopEvent
+    @role(event)
+end
+
+declare AccelerationEvent
+    @role(event)
+end
+
+declare RefusedAlcoholTestEvent
+    @role(event)
+end
+
+declare RefusedDrugTestEvent
+    @role(event)
+end
+
+// ===========================================================================
+// CEP PRAVILO 1: UCESTALA AGRESIVNA VOZNJA
+// Ako se u periodu od 15 minuta dese:
+//   - najmanje 3 prekoracenja brzine
+//   - najmanje 2 nagla kocenja
+//   - najmanje 1 prelazak preko pune linije
+// generise se AggressiveDrivingPattern
+// ===========================================================================
+
+rule "CEP - Ucestala agresivna voznja"
+    salience 90
+when
+    $e1 : SpeedingEvent($pid : personalId)
+    Number( intValue >= 3 ) from accumulate(
+        SpeedingEvent(personalId == $pid) over window:time(15m),
+        count(1)
+    )
+    Number( intValue >= 2 ) from accumulate(
+        SuddenBrakingEvent(personalId == $pid) over window:time(15m),
+        count(1)
+    )
+    exists LaneCrossingEvent(personalId == $pid) over window:time(15m)
+    not AggressiveDrivingPattern(personalId == $pid)
+then
+    insert(new AggressiveDrivingPattern($pid,
+        "Ucestala agresivna voznja: 3+ prekoracenja brzine, 2+ nagla kocenja, prelazak linije u 15 min",
+        java.time.LocalDateTime.now()));
+    insert(new CepAlarm("UCESTALA_AGRESIVNA_VOZNJA", java.time.LocalDateTime.now()));
+    System.out.println("[CEP] ALARM: Ucestala agresivna voznja za vozaca " + $pid);
+end
+
+// ===========================================================================
+// CEP PRAVILO 2: POTENCIJALNI BEG
+// Ako se u periodu od 10 minuta dese:
+//   - odbijanje zaustavljanja
+//   - 2+ nagla ubrzanja
+//   - prekoracenje brzine preko 40 km/h
+// generise se PotentialEscapeAttempt
+// ===========================================================================
+
+rule "CEP - Potencijalni beg"
+    salience 89
+when
+    $e2 : RefusedStopEvent($pid2 : personalId)
+    exists RefusedStopEvent(personalId == $pid2) over window:time(10m)
+    Number( intValue >= 2 ) from accumulate(
+        AccelerationEvent(personalId == $pid2) over window:time(10m),
+        count(1)
+    )
+    exists SpeedingEvent(personalId == $pid2, speedOverLimit > 40) over window:time(10m)
+    not PotentialEscapeAttempt(personalId == $pid2)
+then
+    insert(new PotentialEscapeAttempt($pid2,
+        "Potencijalni pokusaj bega: odbijanje zaustavljanja + ubrzanja + brzina >40km/h iznad ogranicenja u 10 min",
+        java.time.LocalDateTime.now()));
+    insert(new CepAlarm("POTENCIJALNI_BEG", java.time.LocalDateTime.now()));
+    System.out.println("[CEP] ALARM: Potencijalni beg vozaca " + $pid2);
+end
+
+// ===========================================================================
+// CEP PRAVILO 3: VISOKORIZICNA NOCNA VOZNJA
+// Ako postoji AggressiveDrivingPattern (iz CEP 1) + nocna kontrola + prethodni
+// alkoholni prekrsaji, generise se HighPriorityControl sa visokim prioritetom
+// ===========================================================================
+
+rule "CEP - Visokorizicna nocna voznja"
+    salience 88
+when
+    $pattern : AggressiveDrivingPattern($pid3 : personalId)
+    $vozac : Driver(personalId == $pid3, previousAlcoholOffenses > 0)
+    Control(nightControl == true)
+    not HighPriorityControl(personalId == $pid3)
+then
+    insert(new HighPriorityControl($pid3,
+        "Visokorizicna nocna voznja: agresivna voznja + nocna kontrola + prethodni alkoholni prekrsaji"));
+    insert(new CepAlarm("VISOKORIZICNA_NOCNA_VOZNJA", java.time.LocalDateTime.now()));
+    System.out.println("[CEP] ALARM: Visokorizicna nocna voznja za vozaca " + $pid3);
+end
