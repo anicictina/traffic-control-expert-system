@@ -19,9 +19,11 @@ import java.util.*;
 public class TrafficControlService {
 
     private final KieBase kieBase;
+    private final StatisticsService statisticsService;
 
-    public TrafficControlService(KieBase kieBase) {
+    public TrafficControlService(KieBase kieBase, StatisticsService statisticsService) {
         this.kieBase = kieBase;
+        this.statisticsService = statisticsService;
     }
 
     public TrafficControlResponse analyze(TrafficControlRequest req) {
@@ -69,7 +71,9 @@ public class TrafficControlService {
 
             session.fireAllRules();
 
-            return buildResponse(session, decision, req.getPersonalId());
+            TrafficControlResponse response = buildResponse(session, decision, req.getPersonalId());
+            statisticsService.record(req, response);
+            return response;
         } finally {
             session.dispose();
         }

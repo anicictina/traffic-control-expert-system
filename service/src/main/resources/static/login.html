@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prijava — Ekspertski sistem</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f0f2f5;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+    padding: 40px;
+    width: 360px;
+  }
+  .logo {
+    text-align: center;
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a3a5c;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 28px;
+  }
+  .form-group {
+    margin-bottom: 16px;
+  }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1e293b;
+    transition: border-color 0.15s;
+  }
+  input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px #dbeafe;
+  }
+  button {
+    width: 100%;
+    padding: 12px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background 0.15s;
+  }
+  button:hover { background: #1d4ed8; }
+  .alert {
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    color: #dc2626;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .alert.visible { display: block; }
+  .info {
+    background: #dbeafe;
+    border: 1px solid #93c5fd;
+    color: #1e40af;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    margin-top: 20px;
+    line-height: 1.6;
+  }
+  .info strong { display: block; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">🚔</div>
+  <h1>Ekspertski sistem</h1>
+  <p class="subtitle">Saobraćajna kontrola — Prijava korisnika</p>
+
+  <div class="alert" id="errorMsg">Pogrešno korisničko ime ili lozinka.</div>
+
+  <form method="POST" action="/api/auth/login">
+    <div class="form-group">
+      <label>Korisničko ime</label>
+      <input type="text" name="username" placeholder="npr. policajac" required autofocus>
+    </div>
+    <div class="form-group">
+      <label>Lozinka</label>
+      <input type="password" name="password" placeholder="••••••••••" required>
+    </div>
+    <button type="submit">Prijavi se</button>
+  </form>
+
+  <div class="info">
+    <strong>Demo nalozi:</strong>
+    policajac / policajac123 — standardni pristup<br>
+    admin / admin123 — administratorski pristup
+  </div>
+</div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('greska')) {
+    document.getElementById('errorMsg').classList.add('visible');
+  }
+</script>
+</body>
+</html>

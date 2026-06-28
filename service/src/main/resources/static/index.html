@@ -37,6 +37,47 @@
   header .logo { font-size: 22px; }
   header h1 { font-size: 18px; font-weight: 600; }
   header p { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+  header .user-info {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+  }
+  header .user-info .badge {
+    background: rgba(255,255,255,0.15);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+  }
+  header .btn-logout {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+  header .btn-logout:hover { background: rgba(255,255,255,0.25); }
+
+  /* Statistike */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+  }
+  .stat-box .num { font-size: 32px; font-weight: 700; color: var(--accent); }
+  .stat-box .lbl { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+  .bar-row .key { width: 160px; flex-shrink: 0; }
+  .bar-wrap { flex: 1; background: var(--border); border-radius: 4px; height: 18px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.5s; }
+  .bar-row .val { width: 30px; text-align: right; font-weight: 600; }
 
   nav {
     background: var(--surface);
@@ -288,12 +329,19 @@
     <h1>Ekspertski sistem za saobraćajnu kontrolu</h1>
     <p>Podrška odlučivanju tokom kontrole vozača pod dejstvom alkohola i psihoaktivnih supstanci</p>
   </div>
+  <div class="user-info">
+    <span id="userBadge" class="badge">—</span>
+    <form method="POST" action="/api/auth/logout" style="margin:0">
+      <button type="submit" class="btn-logout">Odjavi se</button>
+    </form>
+  </div>
 </header>
 
 <nav>
   <button class="active" onclick="showTab('kontrola', this)">Kontrola vozača</button>
   <button onclick="showTab('cep', this)">CEP demo</button>
-  <button onclick="showTab('sabloni', this)">Sabloni</button>
+  <button id="tabSabloni" onclick="showTab('sabloni', this)">Sabloni</button>
+  <button onclick="showTab('statistike', this)">Statistike</button>
   <button onclick="showTab('o-sistemu', this)">O sistemu</button>
 </nav>
 
@@ -447,7 +495,10 @@
 
   <!-- Rezultati -->
   <div id="results" class="hidden" style="margin-top:32px">
-    <div class="section-title" style="font-size:16px">Rezultati analize</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="section-title" style="font-size:16px;margin:0">Rezultati analize</div>
+      <button class="btn btn-secondary btn-sm" onclick="generisiZapisnik()">🖨 Generiši zapisnik</button>
+    </div>
 
     <div class="grid-2" style="margin-bottom:20px">
       <div class="card">
@@ -573,6 +624,20 @@
 </main>
 </div>
 
+<!-- ==================== TAB: STATISTIKE ==================== -->
+<div id="tab-statistike" class="tab-content">
+<main>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div class="section-title" style="margin:0">Statistike kontrola</div>
+    <button class="btn btn-secondary btn-sm" onclick="loadStatistike()">↻ Osveži</button>
+  </div>
+
+  <div id="statsContent">
+    <div class="empty-state"><div class="icon">📊</div><p>Kliknite "Osveži" za učitavanje statistika</p></div>
+  </div>
+</main>
+</div>
+
 <!-- ==================== TAB: O SISTEMU ==================== -->
 <div id="tab-o-sistemu" class="tab-content">
 <main>
@@ -634,6 +699,7 @@ function showTab(name, btn) {
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
+  if (name === 'statistike') loadStatistike();
 }
 
 function selectScenario(name, el) {
@@ -761,6 +827,8 @@ async function analyze() {
     });
     if (!res.ok) throw new Error('Server greška: ' + res.status);
     const data = await res.json();
+    lastRequest = body;
+    lastResponse = data;
     renderResults(data);
   } catch (e) {
     alert('Greška pri komunikaciji sa serverom:\n' + e.message);
@@ -936,6 +1004,151 @@ function cb(id) { return document.getElementById(id).checked; }
 // Postavi podrazumevano vreme kontrole na "sada"
 document.getElementById('controlTime').value = getNow();
 document.getElementById('licenseExpiryDate').value = getFutureDate(730);
+
+// ---- Auth provera ----
+let currentUser = null;
+
+async function checkAuth() {
+  try {
+    const res = await fetch('/api/auth/whoami');
+    if (res.status === 401 || res.redirected) {
+      window.location.href = '/login.html';
+      return;
+    }
+    currentUser = await res.json();
+    document.getElementById('userBadge').textContent =
+      currentUser.username + ' (' + (currentUser.role === 'ROLE_ADMIN' ? 'Admin' : 'Policajac') + ')';
+    if (currentUser.role !== 'ROLE_ADMIN') {
+      const t = document.getElementById('tabSabloni');
+      if (t) t.style.display = 'none';
+    }
+  } catch (e) {
+    window.location.href = '/login.html';
+  }
+}
+
+checkAuth();
+
+// ---- Statistike ----
+async function loadStatistike() {
+  const el = document.getElementById('statsContent');
+  el.innerHTML = '<div class="empty-state"><div class="icon">⏳</div><p>Učitavanje...</p></div>';
+  try {
+    const res = await fetch('/api/statistike');
+    if (!res.ok) throw new Error('Greška ' + res.status);
+    const data = await res.json();
+    el.innerHTML = renderStatistike(data);
+  } catch (e) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>' + e.message + '</p></div>';
+  }
+}
+
+function renderStatistike(d) {
+  const ukupno = d.ukupno || 0;
+  const rizici = d.nivoiRizika || {};
+  const preporuke = d.preporuke || {};
+  const lokacije = d.lokacije || {};
+  const prekrsaji = d.prekrsaji || {};
+
+  const maxRizik = Math.max(1, ...Object.values(rizici));
+  const maxPrep = Math.max(1, ...Object.values(preporuke));
+  const maxLok = Math.max(1, ...Object.values(lokacije));
+  const maxPrek = Math.max(1, ...Object.values(prekrsaji));
+
+  function bars(obj, max, color) {
+    return Object.entries(obj).map(([k, v]) =>
+      `<div class="bar-row">
+        <span class="key">${k}</span>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${Math.round(v/max*100)}%;background:${color}"></div></div>
+        <span class="val">${v}</span>
+      </div>`
+    ).join('');
+  }
+
+  return `
+    <div class="stats-grid">
+      <div class="stat-box"><div class="num">${ukupno}</div><div class="lbl">Ukupno kontrola</div></div>
+      <div class="stat-box"><div class="num" style="color:#16a34a">${rizici['Nizak (0-1)']||0}</div><div class="lbl">Nizak rizik</div></div>
+      <div class="stat-box"><div class="num" style="color:#d97706">${(rizici['Srednji (2)']||0)+(rizici['Visok (3)']||0)}</div><div class="lbl">Srednji/Visok rizik</div></div>
+      <div class="stat-box"><div class="num" style="color:#dc2626">${rizici['Kritican (4)']||0}</div><div class="lbl">Kritičan rizik</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Distribucija nivoa rizika</h3>
+        ${bars(rizici, maxRizik, '#2563eb')}
+        ${ukupno === 0 ? '<p style="color:var(--text-muted);font-size:13px">Nema podataka</p>' : ''}
+      </div>
+      <div class="card">
+        <h3>Preporuke</h3>
+        ${bars(preporuke, maxPrep, '#7c3aed')}
+        ${Object.keys(preporuke).length === 0 ? '<p style="color:var(--text-muted);font-size:13px">Nema podataka</p>' : ''}
+      </div>
+      <div class="card">
+        <h3>Top lokacije</h3>
+        ${bars(lokacije, maxLok, '#0891b2')}
+        ${Object.keys(lokacije).length === 0 ? '<p style="color:var(--text-muted);font-size:13px">Nema podataka</p>' : ''}
+      </div>
+      <div class="card">
+        <h3>Najčešći prekršaji</h3>
+        ${bars(prekrsaji, maxPrek, '#dc2626')}
+        ${Object.keys(prekrsaji).length === 0 ? '<p style="color:var(--text-muted);font-size:13px">Nema podataka</p>' : ''}
+      </div>
+    </div>`;
+}
+
+// ---- Zapisnik ----
+let lastRequest = null;
+let lastResponse = null;
+
+function generisiZapisnik() {
+  if (!lastResponse) return;
+  const req = lastRequest || {};
+  const res = lastResponse;
+  const now = new Date().toLocaleString('sr-RS');
+
+  const offenses = (res.offenses || []).map(o =>
+    `<tr><td>${o.type}</td><td>${o.severity}</td><td>${o.description}</td></tr>`
+  ).join('') || '<tr><td colspan="3">Nema prekršaja</td></tr>';
+
+  const hyps = Object.entries(res.hypotheses || {}).map(([k, v]) =>
+    `<tr><td>${k}</td><td style="color:${v?'#dc2626':'#16a34a'};font-weight:600">${v?'DA':'NE'}</td></tr>`
+  ).join('');
+
+  const html = `<!DOCTYPE html><html lang="sr"><head><meta charset="UTF-8">
+  <title>Zapisnik o saobraćajnoj kontroli</title>
+  <style>
+    body{font-family:'Segoe UI',sans-serif;max-width:800px;margin:0 auto;padding:30px;color:#1e293b;}
+    h1{font-size:20px;text-align:center;border-bottom:2px solid #1a3a5c;padding-bottom:12px;margin-bottom:20px;}
+    h2{font-size:14px;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;margin:20px 0 8px;}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:12px;}
+    td,th{padding:7px 10px;border:1px solid #e2e8f0;text-align:left;}
+    th{background:#f0f2f5;font-weight:600;}
+    .risk{display:inline-block;padding:4px 14px;border-radius:20px;font-weight:700;
+      background:${res.riskLevel>=4?'#fee2e2':res.riskLevel>=3?'#ffedd5':res.riskLevel>=2?'#fef3c7':'#dcfce7'};
+      color:${res.riskLevel>=4?'#dc2626':res.riskLevel>=3?'#c2410c':res.riskLevel>=2?'#d97706':'#16a34a'};}
+    .footer{margin-top:40px;font-size:12px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:12px;}
+    @media print{button{display:none!important}}
+  </style></head><body>
+  <h1>🚔 Zapisnik o saobraćajnoj kontroli</h1>
+  <p style="text-align:center;font-size:13px;color:#64748b">Generisano: ${now}</p>
+  <h2>Podaci o vozaču</h2>
+  <table><tr><th>Ime i prezime</th><td>${req.fullName||'—'}</td><th>JMBG</th><td>${req.personalId||'—'}</td></tr>
+  <tr><th>Status</th><td>${req.status||'—'}</td><th>Br. prethodnih prekršaja</th><td>${req.previousOffenses||0}</td></tr></table>
+  <h2>Nivo rizika i preporuka</h2>
+  <table><tr><th>Nivo rizika</th><td><span class="risk">${res.riskLevelLabel||'—'} (${res.riskLevel}/4)</span></td>
+  <th>Preporuka</th><td><strong>${res.recommendation||'—'}</strong></td></tr></table>
+  <h2>Utvrđeni prekršaji</h2>
+  <table><tr><th>Tip</th><th>Težina</th><th>Opis</th></tr>${offenses}</table>
+  <h2>Backward chaining hipoteze</h2>
+  <table><tr><th>Hipoteza</th><th>Rezultat</th></tr>${hyps}</table>
+  <div class="footer">Ekspertski sistem za saobraćajnu kontrolu — Tina Aničić SV71/2022 — FTN Novi Sad</div>
+  <br><button onclick="window.print()">Štampaj / Sačuvaj PDF</button>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
 </script>
 </body>
 </html>
