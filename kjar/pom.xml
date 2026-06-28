@@ -28,7 +28,7 @@
 	</scm>
 	<properties>
 		<java.version>17</java.version>
-		<drools.version>7.49.0.Final</drools.version>
+		<drools.version>7.74.1.Final</drools.version>
 	</properties>
 	<dependencies>
 		<dependency>

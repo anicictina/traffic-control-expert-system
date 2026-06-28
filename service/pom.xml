@@ -6,7 +6,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.5.14</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/>
 	</parent>
 	<groupId>com.ftn.sbnz</groupId>
 	<artifactId>service</artifactId>
@@ -14,45 +14,68 @@
 	<name/>
 	<description/>
 	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
+	<licenses><license/></licenses>
+	<developers><developer/></developers>
+	<scm><connection/><developerConnection/><tag/><url/></scm>
+
 	<properties>
 		<java.version>17</java.version>
+		<drools.version>7.74.1.Final</drools.version>
+		<compiler.patch.dir>${project.build.directory}/compiler-patch</compiler.patch.dir>
 	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
+
 		<dependency>
 			<groupId>com.ftn.sbnz</groupId>
 			<artifactId>model</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
+
 		<dependency>
 			<groupId>com.ftn.sbnz</groupId>
 			<artifactId>kjar</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
+
 		<dependency>
 			<groupId>org.kie</groupId>
 			<artifactId>kie-api</artifactId>
-			<version>7.49.0.Final</version>
+			<version>${drools.version}</version>
 		</dependency>
+
 		<dependency>
 			<groupId>org.kie</groupId>
 			<artifactId>kie-ci</artifactId>
-			<version>7.49.0.Final</version>
+			<version>${drools.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.drools</groupId>
+			<artifactId>drools-core</artifactId>
+			<version>${drools.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.drools</groupId>
+			<artifactId>drools-compiler</artifactId>
+			<version>${drools.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.drools</groupId>
+			<artifactId>drools-mvel</artifactId>
+			<version>${drools.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.drools</groupId>
+			<artifactId>drools-templates</artifactId>
+			<version>${drools.version}</version>
 		</dependency>
 
 		<dependency>
@@ -64,10 +87,54 @@
 
 	<build>
 		<plugins>
+
+			<!--
+				Korak 1: Kompajliranje java.lang.Compiler stuba.
+				java.lang.Compiler je uklonjen u Java 17+, ali ga Drools 7.x MVEL dialect
+				zahteva u statickom inicijalizatoru. Stub se kompajlira sa patch-module
+				opcijom i plasira u target/compiler-patch/java/lang/Compiler.class.
+			-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<id>compile-java-lang-compiler-stub</id>
+						<phase>generate-resources</phase>
+						<goals><goal>run</goal></goals>
+						<configuration>
+							<target>
+								<mkdir dir="${compiler.patch.dir}"/>
+								<exec executable="${java.home}/bin/javac"
+								      failonerror="true"
+								      dir="${project.basedir}">
+									<arg value="--patch-module"/>
+									<arg value="java.base=${project.basedir}/src/main/java-patch"/>
+									<arg value="-d"/>
+									<arg value="${compiler.patch.dir}"/>
+									<arg value="${project.basedir}/src/main/java-patch/java/lang/Compiler.java"/>
+								</exec>
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!--
+				Korak 2: Spring Boot pokretanje sa patch-module opcijom da bi stub bio
+				dostupan Drools MVELDialect statickom inicijalizatoru pre ucitavanja.
+				Relativna putanja target/compiler-patch je sigurna jer spring-boot:run
+				koristi projektni direktorijum kao radni direktorijum.
+			-->
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<jvmArguments>--patch-module java.base=target/compiler-patch</jvmArguments>
+				</configuration>
 			</plugin>
+
 		</plugins>
 	</build>
 
