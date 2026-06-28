@@ -491,6 +491,11 @@
     <button class="btn btn-secondary" onclick="fillScenario1()">Primer 1: Istekla dozvola</button>
     <button class="btn btn-secondary" onclick="fillScenario2()">Primer 2: Početnik + alkohol</button>
     <button class="btn btn-secondary" onclick="fillScenario3()">Primer 3: Odbijanje testa</button>
+    <button class="btn btn-secondary" onclick="fillScenario4()">Primer 4: Pripito stanje</button>
+    <button class="btn btn-secondary" onclick="fillScenario5()">Primer 5: Prekoračenje brzine</button>
+    <button class="btn btn-secondary" onclick="fillScenario6()">Primer 6: Teška alkoholisanost</button>
+    <button class="btn btn-secondary" onclick="fillScenario7()">Primer 7: Profesionalni + alkohol</button>
+    <button class="btn btn-secondary" onclick="fillScenario8()">Primer 8: Zabrana upravljanja</button>
   </div>
 
   <!-- Rezultati -->
@@ -769,6 +774,98 @@ function fillScenario3() {
   clearCheckboxes(ALL_SYMPTOMS);
   setCheckboxes(['schoolZone','highRiskZone','afterAccident','redEyes','disorientation',
     'delayedReaction','unstableGait','refusedAlcoholTest']);
+}
+
+function fillScenario4() {
+  document.getElementById('fullName').value = 'Ana Anić';
+  document.getElementById('personalId').value = '0404990123456';
+  document.getElementById('status').value = 'obican';
+  document.getElementById('previousOffenses').value = 0;
+  document.getElementById('previousAlcoholOffenses').value = 0;
+  document.getElementById('licenseNumber').value = 'B11111';
+  document.getElementById('licenseExpiryDate').value = getFutureDate(500);
+  document.getElementById('licenseCategory').value = 'B';
+  document.getElementById('controlTime').value = getNow();
+  document.getElementById('location').value = 'Subotica';
+  document.getElementById('controlType').value = 'redovna';
+  document.getElementById('alcoholResult').value = 0.35;
+  document.getElementById('speed').value = 50;
+  document.getElementById('speedOverLimit').value = 0;
+  clearCheckboxes(ALL_SYMPTOMS);
+}
+
+function fillScenario5() {
+  document.getElementById('fullName').value = 'Nikola Nikolić';
+  document.getElementById('personalId').value = '0505990123456';
+  document.getElementById('status').value = 'obican';
+  document.getElementById('previousOffenses').value = 1;
+  document.getElementById('previousAlcoholOffenses').value = 0;
+  document.getElementById('licenseNumber').value = 'B22222';
+  document.getElementById('licenseExpiryDate').value = getFutureDate(400);
+  document.getElementById('licenseCategory').value = 'B';
+  document.getElementById('controlTime').value = getNow();
+  document.getElementById('location').value = 'Kragujevac';
+  document.getElementById('controlType').value = 'redovna';
+  document.getElementById('alcoholResult').value = 0.0;
+  document.getElementById('speed').value = 85;
+  document.getElementById('speedOverLimit').value = 25;
+  clearCheckboxes(ALL_SYMPTOMS);
+}
+
+function fillScenario6() {
+  document.getElementById('fullName').value = 'Dragan Dragić';
+  document.getElementById('personalId').value = '0606990123456';
+  document.getElementById('status').value = 'obican';
+  document.getElementById('previousOffenses').value = 2;
+  document.getElementById('previousAlcoholOffenses').value = 1;
+  document.getElementById('licenseNumber').value = 'B33333';
+  document.getElementById('licenseExpiryDate').value = getFutureDate(300);
+  document.getElementById('licenseCategory').value = 'B';
+  document.getElementById('controlTime').value = getNow();
+  document.getElementById('location').value = 'Novi Sad';
+  document.getElementById('controlType').value = 'pojacana';
+  document.getElementById('alcoholResult').value = 1.65;
+  document.getElementById('speed').value = 50;
+  document.getElementById('speedOverLimit').value = 0;
+  clearCheckboxes(ALL_SYMPTOMS);
+  setCheckboxes(['nightControl', 'redEyes', 'disorientation', 'unstableGait']);
+}
+
+function fillScenario7() {
+  document.getElementById('fullName').value = 'Zoran Zorić';
+  document.getElementById('personalId').value = '0707990123456';
+  document.getElementById('status').value = 'profesionalni';
+  document.getElementById('previousOffenses').value = 1;
+  document.getElementById('previousAlcoholOffenses').value = 0;
+  document.getElementById('licenseNumber').value = 'C44444';
+  document.getElementById('licenseExpiryDate').value = getFutureDate(600);
+  document.getElementById('licenseCategory').value = 'C';
+  document.getElementById('controlTime').value = getNow();
+  document.getElementById('location').value = 'Beograd';
+  document.getElementById('controlType').value = 'redovna';
+  document.getElementById('alcoholResult').value = 0.15;
+  document.getElementById('speed').value = 80;
+  document.getElementById('speedOverLimit').value = 0;
+  clearCheckboxes(ALL_SYMPTOMS);
+}
+
+function fillScenario8() {
+  document.getElementById('fullName').value = 'Milan Milić';
+  document.getElementById('personalId').value = '0808990123456';
+  document.getElementById('status').value = 'obican';
+  document.getElementById('previousOffenses').value = 5;
+  document.getElementById('previousAlcoholOffenses').value = 2;
+  document.getElementById('licenseNumber').value = 'B55555';
+  document.getElementById('licenseExpiryDate').value = getFutureDate(200);
+  document.getElementById('licenseCategory').value = 'B';
+  document.getElementById('controlTime').value = getNow();
+  document.getElementById('location').value = 'Čačak';
+  document.getElementById('controlType').value = 'pojacana';
+  document.getElementById('alcoholResult').value = 0.0;
+  document.getElementById('speed').value = 50;
+  document.getElementById('speedOverLimit').value = 0;
+  clearCheckboxes(ALL_SYMPTOMS);
+  setCheckboxes(['drivingBan']);
 }
 
 function clearCheckboxes(ids) { ids.forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; }); }
