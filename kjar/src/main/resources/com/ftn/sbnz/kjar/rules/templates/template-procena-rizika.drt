@@ -1,0 +1,27 @@
+template header
+contextField
+riskIncrement
+newRecommendation
+ruleDescription
+
+package com.ftn.sbnz.kjar.rules
+
+import com.ftn.sbnz.model.Control
+import com.ftn.sbnz.model.ControlDecision
+
+template "Kontekstualna procena nivoa rizika"
+
+rule "Kontekstualni rizik - @{contextField} (@{row.rowNumber})"
+    salience 69
+when
+    Control(@{contextField} == true)
+    $odluka : ControlDecision(riskLevel < 4)
+then
+    modify($odluka) {
+        setRiskLevel(Math.min(4, $odluka.getRiskLevel() + @{riskIncrement})),
+        setRecommendation("@{newRecommendation}")
+    }
+    System.out.println("[SABLON] Kontekstualni rizik povecanje: @{ruleDescription}");
+end
+
+end template

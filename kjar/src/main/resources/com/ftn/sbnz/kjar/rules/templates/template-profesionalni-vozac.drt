@@ -1,0 +1,32 @@
+template header
+alcoholThreshold
+offenseCode
+offenseSeverity
+offenseDescription
+riskLevel
+recommendation
+
+package com.ftn.sbnz.kjar.rules
+
+import com.ftn.sbnz.model.Driver
+import com.ftn.sbnz.model.AlcoTest
+import com.ftn.sbnz.model.Offense
+import com.ftn.sbnz.model.ControlDecision
+
+template "Pravila za profesionalne vozace"
+
+rule "Profesionalni vozac - alkohol > @{alcoholThreshold} (@{row.rowNumber})"
+    salience 86
+when
+    $vozac  : Driver(status == "profesionalni")
+    $alko   : AlcoTest(refused == false, result > @{alcoholThreshold})
+    $odluka : ControlDecision(riskLevel < @{riskLevel})
+then
+    insert(new Offense($vozac.getPersonalId(), "@{offenseCode}", "@{offenseSeverity}", "@{offenseDescription}"));
+    modify($odluka) {
+        setRiskLevel(@{riskLevel}),
+        setRecommendation("@{recommendation}")
+    }
+end
+
+end template

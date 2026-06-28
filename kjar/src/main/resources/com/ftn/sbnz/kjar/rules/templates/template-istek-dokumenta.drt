@@ -1,0 +1,33 @@
+template header
+documentField
+expiryCondition
+offenseCode
+offenseSeverity
+offenseDescription
+riskLevel
+recommendation
+
+package com.ftn.sbnz.kjar.rules
+
+import com.ftn.sbnz.model.Driver
+import com.ftn.sbnz.model.DrivingLicense
+import com.ftn.sbnz.model.Offense
+import com.ftn.sbnz.model.ControlDecision
+
+template "Provera isteka dokumenata"
+
+rule "Istek dokumenta - @{documentField} (@{row.rowNumber})"
+    salience 100
+when
+    $vozac  : Driver()
+    $doz    : DrivingLicense(@{expiryCondition})
+    $odluka : ControlDecision(riskLevel < @{riskLevel})
+then
+    insert(new Offense($vozac.getPersonalId(), "@{offenseCode}", "@{offenseSeverity}", "@{offenseDescription}"));
+    modify($odluka) {
+        setRiskLevel(@{riskLevel}),
+        setRecommendation("@{recommendation}")
+    }
+end
+
+end template

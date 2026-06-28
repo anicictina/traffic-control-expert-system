@@ -1,0 +1,36 @@
+template header
+alarmType
+minSpeedingCount
+minBrakingCount
+timeWindowMinutes
+alarmDescription
+
+package com.ftn.sbnz.kjar.rules
+
+import com.ftn.sbnz.model.CepAlarm
+import com.ftn.sbnz.model.AggressiveDrivingPattern
+import com.ftn.sbnz.model.SpeedingEvent
+import com.ftn.sbnz.model.SuddenBrakingEvent
+
+template "Sablon za CEP alarme agresivne voznje"
+
+rule "CEP alarm - @{alarmType} (@{row.rowNumber})"
+    salience 87
+when
+    $e : SpeedingEvent($pid : personalId)
+    Number( intValue >= @{minSpeedingCount} ) from accumulate(
+        SpeedingEvent(personalId == $pid) over window:time(@{timeWindowMinutes}m),
+        count(1)
+    )
+    Number( intValue >= @{minBrakingCount} ) from accumulate(
+        SuddenBrakingEvent(personalId == $pid) over window:time(@{timeWindowMinutes}m),
+        count(1)
+    )
+    not AggressiveDrivingPattern(personalId == $pid)
+then
+    insert(new AggressiveDrivingPattern($pid, "@{alarmDescription}", java.time.LocalDateTime.now()));
+    insert(new CepAlarm("@{alarmType}", java.time.LocalDateTime.now()));
+    System.out.println("[CEP SABLON] Alarm @{alarmType} detektovan za vozaca " + $pid);
+end
+
+end template
