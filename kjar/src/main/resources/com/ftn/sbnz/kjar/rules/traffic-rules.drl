@@ -137,6 +137,21 @@ then
     }
 end
 
+rule "Obican vozac u pripit stanju - upozorenje"
+    salience 75
+when
+    $vozac : Driver(status == "obican")
+    AlcoholState(personalId == $vozac.personalId, state == "PRIPITO")
+    $odluka : ControlDecision(riskLevel < 1)
+then
+    insert(new Offense($vozac.getPersonalId(), "PRIPITO_STANJE", "Nizak",
+        "Vozac je u pripit stanju (0.21 - 0.50 promila), ispod zakonskog maksimuma"));
+    modify($odluka) {
+        setRiskLevel(1),
+        setRecommendation("UPOZORENJE")
+    }
+end
+
 rule "Teska alkoholisanost - iskljucenje iz saobracaja"
     salience 77
 when
@@ -317,5 +332,21 @@ then
     modify($odluka) {
         setRiskLevel(4),
         setRecommendation("ZADRZAVANJE_VOZACA")
+    }
+end
+
+rule "Prekoracenje brzine - novcana kazna"
+    salience 60
+when
+    $vozac : Driver()
+    $brzina : SpeedingEvent(personalId == $vozac.personalId, speedOverLimit > 0)
+    not Offense(driverPersonalId == $vozac.personalId, type == "PREKORACENJE_BRZINE")
+    $odluka : ControlDecision(riskLevel < 2)
+then
+    insert(new Offense($vozac.getPersonalId(), "PREKORACENJE_BRZINE", "Nizak",
+        "Vozac je prekoracen dozvoljenu brzinu za " + $brzina.getSpeedOverLimit() + " km/h"));
+    modify($odluka) {
+        setRiskLevel(Math.max($odluka.getRiskLevel(), 1)),
+        setRecommendation("NOVCANA_KAZNA")
     }
 end
