@@ -185,6 +185,27 @@ then
     insert(new Offense($vozac.getPersonalId(), "VISOK_RIZIK", "Kritican", "Agresivna voznja, prekoračenje brzine i prethodni ozbiljni prekršaji"));
 end
 
+rule "Nocna kontrola sa visokim rizikom"
+    salience 69
+when
+    $vozac : Driver()
+    Control(nightControl == true)
+    HighRiskDriver(personalId == $vozac.personalId)
+    not HighPriorityControl(personalId == $vozac.personalId)
+then
+    insert(new HighPriorityControl($vozac.getPersonalId(), "Nocna kontrola sa visokim rizikom vozaca"));
+end
+
+rule "Skolska zona i prekoracenje brzine"
+    salience 68
+when
+    $vozac : Driver()
+    Control(schoolZone == true)
+    SpeedingEvent(personalId == $vozac.personalId, speedOverLimit > 0)
+    not HighPriorityControl(personalId == $vozac.personalId)
+then
+    insert(new HighPriorityControl($vozac.getPersonalId(), "Skolska zona sa prekoracenjem brzine"));
+end
 
 rule "Pozitivan droga test"
     salience 78
