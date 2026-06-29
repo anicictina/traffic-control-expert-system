@@ -13,15 +13,15 @@ template "Kontekstualna procena nivoa rizika"
 
 rule "Kontekstualni rizik - @{contextField} (@{row.rowNumber})"
     salience 69
+    no-loop true
 when
     Control(@{contextField} == true)
     $odluka : ControlDecision(riskLevel < 4)
 then
     modify($odluka) {
-        setRiskLevel(Math.min(4, $odluka.getRiskLevel() + @{riskIncrement})),
-        setRecommendation("@{newRecommendation}")
+        setRiskLevel(Math.min(4, $odluka.getRiskLevel() + @{riskIncrement}))
     }
-    System.out.println("[SABLON] Kontekstualni rizik povecanje: @{ruleDescription}");
+    System.out.println("[SABLON] @{ruleDescription}");
 end
 
 end template

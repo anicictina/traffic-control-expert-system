@@ -23,9 +23,10 @@ rule "BC hijerarhija faktora rizika"
 when
     not RiskFactorLink(higherFactor == "ISKLJUCENJE_IZ_SAOBRACAJA", lowerFactor == "ISTEKLA_VOZACKA")
 then
-    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "ISTEKLA_VOZACKA"));
+    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "ISTEKLA_VOZACKA_SABLON"));
     insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "ZABRANA_UPRAVLJANJA"));
-    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "PROFESIONALNI_VOZAC_ALKOHOL"));
+    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "PROFESIONALNI_ALKOHOL_SABLON_01"));
+    insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "POCETNIK_ALKOHOL_SABLON_02"));
     insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "TESKA_ALKOHOLISANOST_PREKRSAJ"));
     insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "POTPUNA_ALKOHOLISANOST_PREKRSAJ"));
     insert(new RiskFactorLink("ISKLJUCENJE_IZ_SAOBRACAJA", "DANGEROUS_DRIVING"));
@@ -36,7 +37,8 @@ then
     insert(new RiskFactorLink("VISOKORIZICAN_VOZAC", "VISOK_RIZIK"));
     insert(new RiskFactorLink("VISOKORIZICAN_VOZAC", "PONOVLJENI_VISOK_RIZIK"));
     insert(new RiskFactorLink("VISOKORIZICAN_VOZAC", "DANGEROUS_DRIVING"));
-    insert(new RiskFactorLink("POTREBNO_ZADRZAVANJE", "POCETNIK_ALKOHOL"));
+    insert(new RiskFactorLink("POTREBNO_ZADRZAVANJE", "POCETNIK_ALKOHOL_SABLON_01"));
+    insert(new RiskFactorLink("POTREBNO_ZADRZAVANJE", "PROFESIONALNI_ALKOHOL_SABLON_02"));
     insert(new RiskFactorLink("POTREBNO_ZADRZAVANJE", "KRITICAN_RIZIK"));
     insert(new RiskFactorLink("POTREBNO_ZADRZAVANJE", "PONOVLJENI_VISOK_RIZIK"));
     insert(new RiskFactorLink("DANGEROUS_DRIVING", "VISOK_RIZIK"));

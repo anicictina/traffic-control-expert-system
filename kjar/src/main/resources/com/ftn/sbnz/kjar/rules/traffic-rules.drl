@@ -17,19 +17,6 @@ import com.ftn.sbnz.model.HighRiskDriver
 import com.ftn.sbnz.model.RepeatHighRiskDriver
 import com.ftn.sbnz.model.SpeedingEvent
 
-rule "Istekla vozacka dozvola"
-    salience 100
-when
-    $vozac : Driver()
-    $dozvola : DrivingLicense(expiryDate != null, expiryDate.isBefore(java.time.LocalDate.now()))
-    $odluka : ControlDecision(riskLevel < 2)
-then
-    insert(new Offense($vozac.getPersonalId(), "ISTEKLA_VOZACKA", "Visok", "Vozacka dozvola je istekla"));
-    modify($odluka) {
-        setRiskLevel(2),
-        setRecommendation("ISKLJUCENJE_IZ_SAOBRACAJA")
-    }
-end
 
 rule "Zabrana upravljanja"
     salience 95
@@ -44,33 +31,7 @@ then
     }
 end
 
-rule "Pocetnik sa alkoholom"
-    salience 90
-when
-    $vozac : Driver(status == "pocetnik")
-    $alko : AlcoTest(refused == false, result > 0.0)
-    $odluka : ControlDecision(riskLevel < 3)
-then
-    insert(new Offense($vozac.getPersonalId(), "POCETNIK_ALKOHOL", "Visok", "Vozac pocetnik ima alkohol u krvi"));
-    modify($odluka) {
-        setRiskLevel(3),
-        setRecommendation("ZADRZAVANJE_VOZACA")
-    }
-end
 
-rule "Profesionalni vozac sa alkoholom"
-    salience 85
-when
-    $vozac : Driver(status == "profesionalni")
-    $alko : AlcoTest(refused == false, result > 0.0)
-    $odluka : ControlDecision(riskLevel < 3)
-then
-    insert(new Offense($vozac.getPersonalId(), "PROFESIONALNI_VOZAC_ALKOHOL", "Visok", "Profesionalni vozac ima alkohol u krvi"));
-    modify($odluka) {
-        setRiskLevel(3),
-        setRecommendation("ISKLJUCENJE_IZ_SAOBRACAJA")
-    }
-end
 
 rule "Bez alkoholisanosti"
     salience 82
@@ -224,37 +185,15 @@ then
     insert(new Offense($vozac.getPersonalId(), "VISOK_RIZIK", "Kritican", "Agresivna voznja, prekoračenje brzine i prethodni ozbiljni prekršaji"));
 end
 
-rule "Nocna agresivna voznja povecava rizik"
-    salience 69
-when
-    $kontrola : Control(nightControl == true, aggressiveDriving == true)
-    $odluka : ControlDecision(riskLevel < 4)
-then
-    modify($odluka) {
-        setRiskLevel(Math.min(4, $odluka.getRiskLevel() + 1))
-    }
-end
 
-rule "Skolska zona i brzina"
-    salience 68
+rule "Pozitivan droga test"
+    salience 78
 when
     $vozac : Driver()
-    $kontrola : Control(schoolZone == true)
-    $brzina : SpeedingEvent(personalId == $vozac.personalId, speedOverLimit > 0)
-    not HighPriorityControl(personalId == $vozac.personalId)
+    DrugTest(positive == true)
+    not CriticalRiskDriver(personalId == $vozac.personalId)
 then
-    insert(new HighPriorityControl($vozac.getPersonalId(), "Skolska zona i prekoračenje brzine"));
-end
-
-rule "Skolska zona i brzina povecavaju rizik"
-    salience 67
-when
-    $odluka : ControlDecision(riskLevel < 4)
-    HighPriorityControl()
-then
-    modify($odluka) {
-        setRiskLevel(Math.min(4, $odluka.getRiskLevel() + 1))
-    }
+    insert(new CriticalRiskDriver($vozac.getPersonalId(), "Pozitivan test na psihoaktivne supstance"));
 end
 
 rule "Sumnja na psihoaktivne supstance - crvene oci"
