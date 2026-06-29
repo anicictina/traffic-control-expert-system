@@ -317,6 +317,14 @@
     color: var(--accent);
     margin-bottom: 10px;
   }
+  .badge-csv { background: #0ea5e9; color: white; font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 10px; white-space: nowrap; }
+  .badge-java { background: #8b5cf6; color: white; font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 10px; white-space: nowrap; }
+  .sablon-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+  .sablon-table th { text-align: left; padding: 7px 12px; background: var(--surface-hover,#f1f5f9); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid var(--border); }
+  .sablon-table td { padding: 8px 12px; border-top: 1px solid var(--border); font-size: 13px; }
+  .sablon-table tr:hover td { background: var(--surface-hover,#f8fafc); }
+  .sablon-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .sablon-opis { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
 
   .spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -709,7 +717,7 @@
 <main>
   <div class="section-title">CEP demo — pseudo sat</div>
   <div class="info-box">
-    ℹ️ CEP (Complex Event Processing) pravila koriste <strong>klizne vremenske prozore</strong>
+    CEP (Complex Event Processing) pravila koriste <strong>klizne vremenske prozore</strong>
     i prate uzorke u nizu događaja. Demo koristi <strong>pseudo sat</strong> koji simulira
     protok vremena ubrzano, bez čekanja u realnom vremenu.
   </div>
@@ -764,23 +772,8 @@
 <div id="tab-sabloni" class="tab-content">
 <main>
   <div class="section-title">Sabloni pravila (Rule Templates)</div>
-  <div class="info-box">
-    ℹ️ Sabloni (<strong>.drt</strong> fajlovi) definišu strukturu pravila sa parametrima.
-    <strong>ObjectDataCompiler</strong> zamenjuje parametre konkretnim vrednostima i generiše
-    gotov DRL koji se može učitati u KieSession. Ispod je prikazan generisani DRL za svaki sablon.
-  </div>
-
-  <div class="template-btns">
-    <button class="btn btn-secondary btn-sm" onclick="loadTemplate('istek-dokumenta', this)">1. Provera isteka dokumenata</button>
-    <button class="btn btn-secondary btn-sm" onclick="loadTemplate('pocetnici', this)">2. Pravila za vozače početnike</button>
-    <button class="btn btn-secondary btn-sm" onclick="loadTemplate('profesionalni', this)">3. Pravila za profesionalne vozače</button>
-    <button class="btn btn-secondary btn-sm" onclick="loadTemplate('kontekstualni-rizik', this)">4. Pravila za procenu nivoa rizika</button>
-    <button class="btn btn-secondary btn-sm" onclick="loadTemplate('cep-alarmi', this)">5. Pravila za CEP alarme</button>
-  </div>
-
-  <div id="templateSection" class="hidden">
-    <div id="templateLabel" class="template-label"></div>
-    <pre id="templateOutput" class="template-output">Učitavanje...</pre>
+  <div id="sabloniContainer">
+    <div class="empty-state"><div class="icon">⏳</div><p>Učitavanje sablona...</p></div>
   </div>
 </main>
 </div>
@@ -813,10 +806,6 @@
 <div id="tab-admin" class="tab-content">
 <main>
   <div class="section-title">⚙️ Administrator sistema</div>
-  <div class="info-box">
-    ℹ️ Admin panel pruža uvid u sva aktivna pravila učitana u Drools engine, sadržaj DRL fajlova i generisane sablone.
-    Pristup ovom panelu je ograničen isključivo na administratorsku ulogu.
-  </div>
 
   <div class="grid-2" style="margin-bottom:20px">
     <div class="card">
@@ -838,42 +827,13 @@
     </div>
   </div>
 
-  <!-- Sekcija 1: Lista pravila -->
-  <div class="card" style="margin-bottom:20px">
+  <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <h3 style="margin:0;border:none;padding:0">Upravljanje pravilima sistema</h3>
-      <button class="btn btn-secondary btn-sm" onclick="ucitajPravila()">↻ Osveži pravila</button>
+      <h3 style="margin:0;border:none;padding:0">Učitana pravila</h3>
+      <button class="btn btn-secondary btn-sm" onclick="ucitajPravila()">↻ Osveži</button>
     </div>
     <div id="adminPravilaContent">
-      <div class="empty-state"><div class="icon">⚙️</div><p>Kliknite "Osveži pravila" za učitavanje</p></div>
-    </div>
-  </div>
-
-  <!-- Sekcija 2: DRL fajlovi -->
-  <div class="card" style="margin-bottom:20px">
-    <h3>Upravljanje DRL pravilima</h3>
-    <div class="drl-btns">
-      <button class="btn-drl" onclick="ucitajDrl('forward', this)">📄 Forward chaining pravila</button>
-      <button class="btn-drl" onclick="ucitajDrl('backward', this)">📄 Backward chaining pravila</button>
-      <button class="btn-drl" onclick="ucitajDrl('cep', this)">📄 CEP pravila</button>
-    </div>
-    <div id="drlViewerLabel" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:8px;display:none"></div>
-    <pre id="drlViewer" class="drl-viewer" style="display:none"></pre>
-  </div>
-
-  <!-- Sekcija 3: Sabloni -->
-  <div class="card">
-    <h3>Upravljanje templejtima</h3>
-    <div class="template-btns" style="margin-bottom:14px">
-      <button class="btn btn-secondary btn-sm" onclick="loadAdminTemplate('istek-dokumenta', this)">1. Provera isteka dokumenata</button>
-      <button class="btn btn-secondary btn-sm" onclick="loadAdminTemplate('pocetnici', this)">2. Pravila za vozače početnike</button>
-      <button class="btn btn-secondary btn-sm" onclick="loadAdminTemplate('profesionalni', this)">3. Pravila za profesionalne vozače</button>
-      <button class="btn btn-secondary btn-sm" onclick="loadAdminTemplate('kontekstualni-rizik', this)">4. Pravila za procenu nivoa rizika</button>
-      <button class="btn btn-secondary btn-sm" onclick="loadAdminTemplate('cep-alarmi', this)">5. Pravila za CEP alarme</button>
-    </div>
-    <div id="adminSablonSection" style="display:none">
-      <div id="adminSablonLabel" class="template-label"></div>
-      <pre id="adminSablonOutput" class="template-output">Učitavanje...</pre>
+      <div class="empty-state"><div class="icon">⚙️</div><p>Kliknite "Osveži" za učitavanje</p></div>
     </div>
   </div>
 </main>
@@ -925,6 +885,7 @@ function showTab(name, btn) {
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
   if (name === 'statistike') { loadStatistike(); loadIstorija(); }
+  if (name === 'sabloni') { loadSabloniTab(); }
 }
 
 function selectScenario(name, el) {
@@ -957,23 +918,21 @@ function fillScenario1() {
 }
 
 function fillScenario2() {
-  document.getElementById('fullName').value = 'Ivan Ilić';
+  document.getElementById('fullName').value = 'Ana Nikolić';
   document.getElementById('personalId').value = '0202990123456';
   document.getElementById('status').value = 'pocetnik';
-  document.getElementById('previousOffenses').value = 4;
-  document.getElementById('previousAlcoholOffenses').value = 2;
+  document.getElementById('previousOffenses').value = 0;
+  document.getElementById('previousAlcoholOffenses').value = 0;
   document.getElementById('licenseNumber').value = 'B67890';
   document.getElementById('licenseExpiryDate').value = getFutureDate(730);
   document.getElementById('licenseCategory').value = 'B';
   document.getElementById('controlTime').value = getNow();
   document.getElementById('location').value = 'Beograd';
   document.getElementById('controlType').value = 'pojacana';
-  document.getElementById('alcoholResult').value = 0.72;
-  document.getElementById('speed').value = 92;
-  document.getElementById('speedOverLimit').value = 32;
+  document.getElementById('alcoholResult').value = 0.30;
+  document.getElementById('speed').value = 60;
+  document.getElementById('speedOverLimit').value = 0;
   clearCheckboxes(ALL_SYMPTOMS);
-  setCheckboxes(['drivingBan','nightControl','weekendControl','aggressiveDriving',
-    'redEyes','disorientation','delayedReaction','drugTestPositive']);
 }
 
 function fillScenario3() {
@@ -1100,6 +1059,12 @@ function getFutureDate(days) {
 
 // ---- Analiza ----
 async function analyze() {
+  const pid = v('personalId').trim();
+  if (!pid) {
+    alert('JMBG je obavezno polje.');
+    return;
+  }
+
   const btn = document.getElementById('btnAnalyze');
   btn.classList.add('loading');
   btn.disabled = true;
@@ -1301,32 +1266,38 @@ function renderCepResults(data) {
 }
 
 // ---- Sabloni ----
-const templateNames = {
-  'istek-dokumenta': '1. Provera isteka dokumenata',
-  'pocetnici': '2. Pravila za vozače početnike',
-  'profesionalni': '3. Pravila za profesionalne vozače',
-  'kontekstualni-rizik': '4. Pravila za procenu nivoa rizika',
-  'cep-alarmi': '5. Pravila za CEP alarme'
-};
+let sabloniUcitani = false;
 
-async function loadTemplate(name, btn) {
-  document.querySelectorAll('.template-btns .btn').forEach(b => b.classList.replace('btn-primary', 'btn-secondary'));
-  btn.classList.replace('btn-secondary', 'btn-primary');
-
-  const section = document.getElementById('templateSection');
-  const output = document.getElementById('templateOutput');
-  const label = document.getElementById('templateLabel');
-
-  section.classList.remove('hidden');
-  label.textContent = templateNames[name] || name;
-  output.textContent = 'Učitavanje...';
-
+async function loadSabloniTab() {
+  if (sabloniUcitani) return;
+  const container = document.getElementById('sabloniContainer');
   try {
-    const res = await fetch('/api/sabloni/' + name);
+    const res = await fetch('/api/sabloni/pregled');
     if (!res.ok) throw new Error('Greška ' + res.status);
-    output.textContent = await res.text();
+    const sabloni = await res.json();
+    container.innerHTML = sabloni.map((s, i) => {
+      const isCsv = s.izvorPodataka && s.izvorPodataka.includes('CSV');
+      const badge = isCsv
+        ? `<span class="badge-csv">DataProvider + CSV</span>`
+        : `<span class="badge-java">ObjectDataCompiler</span>`;
+      const thead = s.kolone.map(k => `<th>${k}</th>`).join('');
+      const tbody = s.redovi.map(red => `<tr>${red.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
+      return `
+        <div class="card" style="margin-bottom:16px">
+          <div class="sablon-header">
+            <h3 style="margin:0;border:none;padding:0;font-size:15px">${i+1}. ${s.naziv}</h3>
+            ${badge}
+          </div>
+          <p class="sablon-opis">${s.opis}</p>
+          <table class="sablon-table">
+            <thead><tr>${thead}</tr></thead>
+            <tbody>${tbody}</tbody>
+          </table>
+        </div>`;
+    }).join('');
+    sabloniUcitani = true;
   } catch (e) {
-    output.textContent = 'Greška pri učitavanju: ' + e.message;
+    container.innerHTML = `<p style="color:var(--danger)">Greška pri učitavanju: ${e.message}</p>`;
   }
 }
 
