@@ -5,6 +5,8 @@ import com.ftn.sbnz.service.dto.OffenseDto;
 import com.ftn.sbnz.service.dto.TrafficControlRequest;
 import com.ftn.sbnz.service.dto.TrafficControlResponse;
 import org.kie.api.KieBase;
+import org.kie.api.event.rule.AfterMatchFiredEvent;
+import org.kie.api.event.rule.DefaultAgendaEventListener;
 import org.kie.api.runtime.KieSession;
 import org.kie.api.runtime.rule.QueryResults;
 import org.kie.api.runtime.rule.QueryResultsRow;
@@ -28,6 +30,13 @@ public class TrafficControlService {
 
     public TrafficControlResponse analyze(TrafficControlRequest req) {
         KieSession session = kieBase.newKieSession();
+        List<String> firedRules = new ArrayList<>();
+        session.addEventListener(new DefaultAgendaEventListener() {
+            @Override
+            public void afterMatchFired(AfterMatchFiredEvent event) {
+                firedRules.add(event.getMatch().getRule().getName());
+            }
+        });
         try {
             Driver driver = new Driver(
                 req.getFullName(), req.getPersonalId(), req.getStatus(),
@@ -71,7 +80,7 @@ public class TrafficControlService {
 
             session.fireAllRules();
 
-            TrafficControlResponse response = buildResponse(session, decision, req.getPersonalId());
+            TrafficControlResponse response = buildResponse(session, decision, req.getPersonalId(), firedRules);
             statisticsService.record(req, response);
             return response;
         } finally {
@@ -79,7 +88,7 @@ public class TrafficControlService {
         }
     }
 
-    private TrafficControlResponse buildResponse(KieSession session, ControlDecision decision, String personalId) {
+    private TrafficControlResponse buildResponse(KieSession session, ControlDecision decision, String personalId, List<String> firedRules) {
         TrafficControlResponse response = new TrafficControlResponse();
         response.setRiskLevel(decision.getRiskLevel());
         response.setRecommendation(decision.getRecommendation());
@@ -125,6 +134,7 @@ public class TrafficControlService {
             riskFactors.add((String) row.get("$factor"));
         }
         response.setRiskFactors(new ArrayList<>(riskFactors));
+        response.setFiredRules(firedRules);
 
         return response;
     }

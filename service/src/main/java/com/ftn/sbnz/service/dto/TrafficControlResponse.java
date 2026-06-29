@@ -12,6 +12,7 @@ public class TrafficControlResponse {
     private List<String> derivedFacts;
     private Map<String, Boolean> hypotheses;
     private List<String> riskFactors;
+    private List<String> firedRules;
 
     public int getRiskLevel() { return riskLevel; }
     public void setRiskLevel(int riskLevel) {
@@ -35,4 +36,6 @@ public class TrafficControlResponse {
     public void setHypotheses(Map<String, Boolean> hypotheses) { this.hypotheses = hypotheses; }
     public List<String> getRiskFactors() { return riskFactors; }
     public void setRiskFactors(List<String> riskFactors) { this.riskFactors = riskFactors; }
+    public List<String> getFiredRules() { return firedRules; }
+    public void setFiredRules(List<String> firedRules) { this.firedRules = firedRules; }
 }
