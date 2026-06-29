@@ -4,6 +4,7 @@ import com.ftn.sbnz.service.TemplateService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -44,5 +45,10 @@ public class TemplateController {
     @GetMapping("/cep-alarmi")
     public ResponseEntity<String> cepAlarmi() {
         return ResponseEntity.ok(templateService.generisiPravilaCepAlarmi());
+    }
+
+    @GetMapping("/pregled")
+    public ResponseEntity<List<Map<String, Object>>> pregled() {
+        return ResponseEntity.ok(templateService.pregledSablona());
     }
 }

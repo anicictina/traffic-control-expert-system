@@ -1,0 +1,5 @@
+nightControl,1,POJACANA_KONTROLA,Nocna kontrola povecava nivo rizika
+weekendControl,1,POJACANA_KONTROLA,Vikend kontrola povecava nivo rizika
+schoolZone,1,POJACANA_KONTROLA,Zona skole povecava nivo rizika
+highRiskZone,1,POJACANA_KONTROLA,Zona visokog rizika povecava nivo rizika
+afterAccident,2,ZADRZAVANJE_VOZACA,Kontrola nakon saobracajne nezgode znacajno povecava nivo rizika

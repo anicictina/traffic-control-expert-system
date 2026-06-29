@@ -1,9 +1,12 @@
 package com.ftn.sbnz.service;
 
+import org.drools.template.DataProvider;
+import org.drools.template.DataProviderCompiler;
 import org.drools.template.ObjectDataCompiler;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -76,17 +79,30 @@ public class TemplateService {
      * (nocna kontrola, zona skole, vikend, zona visokog rizika).
      */
     public String generisiPravilaKontekstRizika() {
-        List<Map<String, Object>> podaci = List.of(
-            rowRizik("nightControl", 1, "POJACANA_KONTROLA",
-                "Nocna kontrola povecava nivo rizika"),
-            rowRizik("schoolZone", 1, "POJACANA_KONTROLA",
-                "Zona skole povecava nivo rizika"),
-            rowRizik("highRiskZone", 1, "POJACANA_KONTROLA",
-                "Zona visokog rizika povecava nivo rizika"),
-            rowRizik("afterAccident", 2, "ZADRZAVANJE_VOZACA",
-                "Kontrola nakon saobracajne nezgode znacajno povecava nivo rizika")
-        );
-        return kompajlirajSablon("/com/ftn/sbnz/kjar/rules/templates/template-procena-rizika.drt", podaci);
+        try (
+            InputStream templateIs = getClass().getResourceAsStream(
+                "/com/ftn/sbnz/kjar/rules/templates/template-procena-rizika.drt");
+            InputStream csvIs = getClass().getResourceAsStream("/procena-rizika-podaci.csv")
+        ) {
+            if (templateIs == null || csvIs == null) {
+                return "// GRESKA: fajl nije pronadjen";
+            }
+            String csvSadrzaj = new String(csvIs.readAllBytes(), StandardCharsets.UTF_8);
+            String[] linije = csvSadrzaj.trim().split("\n");
+            String[][] podaci = new String[linije.length][];
+            for (int i = 0; i < linije.length; i++) {
+                podaci[i] = linije[i].trim().split(",");
+            }
+            final int[] idx = {0};
+            DataProvider dataProvider = new DataProvider() {
+                public boolean hasNext() { return idx[0] < podaci.length; }
+                public String[] next() { return podaci[idx[0]++]; }
+            };
+            DataProviderCompiler compiler = new DataProviderCompiler();
+            return compiler.compile(dataProvider, templateIs);
+        } catch (Exception e) {
+            return "// GRESKA pri kompajliranju sablona: " + e.getMessage();
+        }
     }
 
     /**
@@ -106,8 +122,6 @@ public class TemplateService {
 
     /**
      * Vraca generisana DRL pravila za svih 5 sablona — koristi se za prikaz na odbrani.
-     * Kategorije: istek dokumenata, vozaci pocetnici, profesionalni vozaci,
-     *             kontekstualni rizik, CEP alarmi.
      */
     public Map<String, String> sviGenerisaniSabloni() {
         Map<String, String> rezultati = new LinkedHashMap<>();
@@ -117,6 +131,78 @@ public class TemplateService {
         rezultati.put("4_kontekstualni_rizik", generisiPravilaKontekstRizika());
         rezultati.put("5_cep_alarmi", generisiPravilaCepAlarmi());
         return rezultati;
+    }
+
+    public List<Map<String, Object>> pregledSablona() {
+        List<Map<String, Object>> rezultat = new ArrayList<>();
+
+        rezultat.add(sablon("istek-dokumenta", "Provera isteka dokumenata",
+            "Proverava da li je vozacka dozvola istekla ili istice za manje od 30 dana.",
+            "ObjectDataCompiler",
+            new String[]{"Dokument", "Kod prekrsaja", "Ozbiljnost", "Nivo rizika", "Preporuka"},
+            new String[][]{
+                {"Vozacka dozvola istekla", "ISTEKLA_VOZACKA_SABLON", "Visok", "2", "ISKLJUCENJE_IZ_SAOBRACAJA"},
+                {"Vozacka dozvola istice za 30 dana", "DOZVOLA_ISTICE_USKORO", "Nizak", "1", "UPOZORENJE"}
+            }));
+
+        rezultat.add(sablon("pocetnici", "Pravila za vozace pocetnike",
+            "Nulta tolerancija na alkohol — svaki detektovani alkohol je prekrsaj.",
+            "ObjectDataCompiler",
+            new String[]{"Prag alkohola (‰)", "Kod prekrsaja", "Ozbiljnost", "Nivo rizika", "Preporuka"},
+            new String[][]{
+                {"> 0.0", "POCETNIK_ALKOHOL_SABLON_01", "Visok", "3", "ZADRZAVANJE_VOZACA"},
+                {"> 0.5", "POCETNIK_ALKOHOL_SABLON_02", "Kritican", "4", "ISKLJUCENJE_IZ_SAOBRACAJA"}
+            }));
+
+        rezultat.add(sablon("profesionalni", "Pravila za profesionalne vozace",
+            "Vozaci kategorije C, D, E — nulta tolerancija na alkohol.",
+            "ObjectDataCompiler",
+            new String[]{"Prag alkohola (‰)", "Kod prekrsaja", "Ozbiljnost", "Nivo rizika", "Preporuka"},
+            new String[][]{
+                {"> 0.0", "PROFESIONALNI_ALKOHOL_SABLON_01", "Visok", "3", "ISKLJUCENJE_IZ_SAOBRACAJA"},
+                {"> 0.5", "PROFESIONALNI_ALKOHOL_SABLON_02", "Kritican", "4", "ZADRZAVANJE_VOZACA"}
+            }));
+
+        try (InputStream csvIs = getClass().getResourceAsStream("/procena-rizika-podaci.csv")) {
+            String csv = new String(csvIs.readAllBytes(), StandardCharsets.UTF_8);
+            String[] linije = csv.trim().split("\n");
+            String[][] csvRedovi = new String[linije.length][];
+            for (int i = 0; i < linije.length; i++) {
+                String[] cols = linije[i].trim().split(",");
+                csvRedovi[i] = new String[]{cols[0], "+" + cols[1], cols[2], cols.length > 3 ? cols[3] : ""};
+            }
+            rezultat.add(sablon("kontekstualni-rizik", "Kontekstualna procena nivoa rizika",
+                "Uvecava nivo rizika na osnovu konteksta kontrole. Podaci se ucitavaju iz CSV fajla.",
+                "DataProvider + DataProviderCompiler (CSV fajl)",
+                new String[]{"Kontekst", "Uvecanje rizika", "Preporuka", "Opis"},
+                csvRedovi));
+        } catch (Exception e) {
+            rezultat.add(sablon("kontekstualni-rizik", "Kontekstualna procena nivoa rizika",
+                "Greska pri ucitavanju CSV fajla.", "CSV", new String[]{}, new String[][]{}));
+        }
+
+        rezultat.add(sablon("cep-alarmi", "Pravila za CEP alarme",
+            "Detektuje obrasce agresivne voznje u kliznom vremenskom prozoru.",
+            "ObjectDataCompiler",
+            new String[]{"Tip alarma", "Min. prekoračenja", "Min. kočenja", "Vremenski prozor"},
+            new String[][]{
+                {"AGRESIVNA_VOZNJA_STANDARDNA", "3", "2", "15 min"},
+                {"AGRESIVNA_VOZNJA_STROGA", "2", "1", "10 min"}
+            }));
+
+        return rezultat;
+    }
+
+    private Map<String, Object> sablon(String id, String naziv, String opis, String izvorPodataka,
+                                        String[] kolone, String[][] redovi) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", id);
+        m.put("naziv", naziv);
+        m.put("opis", opis);
+        m.put("izvorPodataka", izvorPodataka);
+        m.put("kolone", Arrays.asList(kolone));
+        m.put("redovi", Arrays.stream(redovi).map(Arrays::asList).toList());
+        return m;
     }
 
     // -----------------------------------------------------------------------
@@ -137,19 +223,6 @@ public class TemplateService {
         return m;
     }
 
-    private Map<String, Object> row2(String driverStatus, double alcoholThreshold,
-                                     String offenseCode, String offenseSeverity,
-                                     String offenseDescription, int riskLevel, String recommendation) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("driverStatus", driverStatus);
-        m.put("alcoholThreshold", alcoholThreshold);
-        m.put("offenseCode", offenseCode);
-        m.put("offenseSeverity", offenseSeverity);
-        m.put("offenseDescription", offenseDescription);
-        m.put("riskLevel", riskLevel);
-        m.put("recommendation", recommendation);
-        return m;
-    }
 
     private Map<String, Object> rowKategorija(double alcoholThreshold,
                                                String offenseCode, String offenseSeverity,
@@ -164,15 +237,6 @@ public class TemplateService {
         return m;
     }
 
-    private Map<String, Object> rowRizik(String contextField, int riskIncrement,
-                                          String newRecommendation, String ruleDescription) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("contextField", contextField);
-        m.put("riskIncrement", riskIncrement);
-        m.put("newRecommendation", newRecommendation);
-        m.put("ruleDescription", ruleDescription);
-        return m;
-    }
 
     private Map<String, Object> rowCep(String alarmType, int minSpeedingCount,
                                         int minBrakingCount, int timeWindowMinutes,
